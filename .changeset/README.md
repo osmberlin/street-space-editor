@@ -55,12 +55,13 @@ bun run packages:check
 
 `packages:release` will:
 
-1. Ensure changeset coverage (`--auto` if needed)
-2. `changeset version` (patch bumps + CHANGELOGs)
-3. `build:packages`
-4. Readiness checks (auth, dist, already-on-npm, …)
-5. Confirm and `npm publish --tag alpha` (TTY for 2FA / EOTP)
-6. Commit version bumps (does not push)
+1. Refuse uncommitted wave-package edits (commit via finish-work first)
+2. Ensure changeset coverage (`packages:changeset --auto` — same as pre-push; agent rewrite when needed)
+3. `changeset version` (patch bumps + CHANGELOGs) when pending changesets exist
+4. `build:packages`
+5. Readiness checks — **already-on-npm packages are skipped** (not errors)
+6. Confirm and `npm publish --tag alpha` (TTY for 2FA / EOTP) for packages with a new local version
+7. Commit version bumps (does not push)
 
 ## Changeset commands
 
