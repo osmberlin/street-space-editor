@@ -24,18 +24,20 @@ import {
   type WavePackage,
   packagesMentionedInPendingChangesets,
   pendingChangesetFiles,
-  uncoveredWavePackages,
+  wavePackageForPath,
 } from './packages-wave.ts'
 
 const CHECK_ONLY = process.argv.includes('--check') || process.argv.includes('packages:check')
 const isCheckScript = process.env.npm_lifecycle_event === 'packages:check'
 
-type Issue = { message: string; fix: string }
+type Issue = { message: string; fix?: string }
+
+type PackageStatus = 'ready' | 'upToDate' | 'blocked'
 
 type PackageReport = {
   name: WavePackage
   version: string
-  ready: boolean
+  status: PackageStatus
   issues: Issue[]
 }
 
@@ -160,7 +162,7 @@ async function checkPackage(
   if (!version.includes('-alpha')) {
     issues.push({
       message: `version "${version}" is not an alpha prerelease`,
-      fix: 'bun run packages:changeset -- --auto   # then: bun run packages:release',
+      fix: 'Land package commits, then re-run bun run packages:release (auto-creates a changeset)',
     })
   }
   if (pkg.publishConfig?.tag !== 'alpha') {
@@ -184,13 +186,13 @@ async function checkPackage(
   if (!existsSync(join(ROOT, dir, 'dist', 'index.js'))) {
     issues.push({
       message: 'missing dist/index.js',
-      fix: `bun run --filter ${name} build   # or: bun run build:packages`,
+      fix: 'bun run build:packages   # packages:release runs this automatically',
     })
   }
   if (!existsSync(join(ROOT, dir, 'dist', 'index.d.ts'))) {
     issues.push({
       message: 'missing dist/index.d.ts',
-      fix: `bun run --filter ${name} build   # or: bun run build:packages`,
+      fix: 'bun run build:packages   # packages:release runs this automatically',
     })
   }
   if (name === '@osm-editor-kit/osm-route-snapper') {
@@ -205,21 +207,28 @@ async function checkPackage(
   if (opts.requireNoPending && pendingMention.has(name)) {
     issues.push({
       message: 'has a pending changeset that is not applied yet',
-      fix: 'bun run version-packages   # or: bun run packages:release (applies automatically)',
+      fix: 'Re-run bun run packages:release (applies version-packages automatically)',
     })
   }
 
+  let alreadyOnNpm = false
   if (opts.canQueryNpm) {
     const onNpm = await npmVersionExists(name, version)
-    if (onNpm === true) {
-      issues.push({
-        message: `${name}@${version} is already on npm`,
-        fix: 'bun run packages:changeset -- --auto   # then packages:release',
-      })
-    }
+    if (onNpm === true) alreadyOnNpm = true
   }
 
-  return { name, version, ready: issues.length === 0, issues }
+  if (issues.length > 0) {
+    return { name, version, status: 'blocked', issues }
+  }
+  if (alreadyOnNpm) {
+    return {
+      name,
+      version,
+      status: 'upToDate',
+      issues: [{ message: `${name}@${version} already on npm (nothing to publish)` }],
+    }
+  }
+  return { name, version, status: 'ready', issues: [] }
 }
 
 function printReport(globalIssues: Issue[], reports: PackageReport[]) {
@@ -227,12 +236,13 @@ function printReport(globalIssues: Issue[], reports: PackageReport[]) {
     p.log.error('Global blockers')
     for (const issue of globalIssues) {
       console.log(`  ${pc.red('✗')} ${issue.message}`)
-      console.log(`    ${pc.dim('→')} ${pc.cyan(issue.fix)}`)
+      if (issue.fix) console.log(`    ${pc.dim('→')} ${pc.cyan(issue.fix)}`)
     }
   }
 
-  const ready = reports.filter((r) => r.ready)
-  const blocked = reports.filter((r) => !r.ready)
+  const ready = reports.filter((r) => r.status === 'ready')
+  const upToDate = reports.filter((r) => r.status === 'upToDate')
+  const blocked = reports.filter((r) => r.status === 'blocked')
 
   if (ready.length > 0) {
     p.log.success(`Ready to publish (${ready.length})`)
@@ -241,23 +251,55 @@ function printReport(globalIssues: Issue[], reports: PackageReport[]) {
     }
   }
 
+  if (upToDate.length > 0) {
+    p.log.info(`Already on npm — skipped (${upToDate.length})`)
+    for (const r of upToDate) {
+      console.log(`  ${pc.dim('·')} ${r.name}@${r.version}`)
+    }
+  }
+
   if (blocked.length > 0) {
-    p.log.warn(`Skipped — not ready (${blocked.length})`)
+    p.log.warn(`Blocked (${blocked.length})`)
     for (const r of blocked) {
       console.log(`  ${pc.yellow('•')} ${r.name}@${r.version}`)
       for (const issue of r.issues) {
         console.log(`      ${pc.red('✗')} ${issue.message}`)
-        console.log(`        ${pc.dim('→')} ${pc.cyan(issue.fix)}`)
+        if (issue.fix) console.log(`        ${pc.dim('→')} ${pc.cyan(issue.fix)}`)
       }
     }
   }
 }
 
-async function ensureChangesetCoverage() {
-  const uncovered = uncoveredWavePackages()
-  if (uncovered.length === 0) return
+function dirtyWavePackagePaths(): string[] {
+  const status = spawnSync('git', ['status', '--porcelain', '--', 'packages'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  })
+  if (status.status !== 0 || !status.stdout.trim()) return []
+  const paths: string[] = []
+  for (const line of status.stdout.split('\n')) {
+    if (!line.trim()) continue
+    const path = line.slice(3).trim().replace(/^"/, '').replace(/"$/, '')
+    // Ignore build outputs if they appear
+    if (path.includes('/dist/')) continue
+    if (wavePackageForPath(path)) paths.push(path)
+  }
+  return paths
+}
 
-  p.log.warn('Wave packages changed without a pending changeset — running packages:changeset --auto')
+async function ensureChangesetCoverage() {
+  const dirty = dirtyWavePackagePaths()
+  if (dirty.length > 0) {
+    p.log.error('Uncommitted changes in wave packages — commit them first (finish-work), then re-run.')
+    for (const path of dirty.slice(0, 20)) {
+      console.log(`  ${pc.yellow('•')} ${path}`)
+    }
+    if (dirty.length > 20) console.log(`  ${pc.dim(`…and ${dirty.length - 20} more`)}`)
+    p.outro(pc.red('Release aborted.'))
+    process.exit(1)
+  }
+
+  p.log.step('Ensuring changeset coverage (same as pre-push)…')
   const result = spawnSync('bun', ['run', 'scripts/packages-changeset.ts', '--', '--auto'], {
     cwd: ROOT,
     stdio: 'inherit',
@@ -265,11 +307,15 @@ async function ensureChangesetCoverage() {
   })
   const code = result.status ?? 1
   if (code === 2) {
-    p.outro(pc.yellow('Changeset was committed. Run git push, then re-run packages:release.'))
+    p.outro(
+      pc.yellow(
+        'Changeset was created and committed. Push that commit (git push), then re-run bun run packages:release.',
+      ),
+    )
     process.exit(1)
   }
   if (code !== 0) {
-    p.outro(pc.red('Could not create changeset coverage. Fix and retry.'))
+    p.outro(pc.red('Could not ensure changeset coverage. Fix and retry.'))
     process.exit(1)
   }
 }
@@ -383,12 +429,18 @@ async function main() {
 
   if (flags.check) {
     const { globalIssues, reports } = await runReadinessChecks({ requireNoPending: true })
-    const ready = reports.filter((r) => r.ready)
-    if (globalIssues.length > 0 || ready.length !== WAVE_PACKAGES.length) {
-      p.outro(pc.yellow('Some packages are not ready — fix with the → commands above.'))
+    const blocked = reports.filter((r) => r.status === 'blocked')
+    if (globalIssues.length > 0 || blocked.length > 0) {
+      p.outro(pc.yellow('Some packages are blocked — fix with the → commands above.'))
       process.exit(1)
     }
-    p.outro(pc.green('All wave packages look ready to publish.'))
+    const ready = reports.filter((r) => r.status === 'ready')
+    const upToDate = reports.filter((r) => r.status === 'upToDate')
+    p.outro(
+      pc.green(
+        `Check ok — ${ready.length} ready to publish, ${upToDate.length} already on npm.`,
+      ),
+    )
     return
   }
 
@@ -397,7 +449,7 @@ async function main() {
 
     const pending = pendingChangesetFiles()
     if (pending.length === 0) {
-      p.log.info('No pending changesets to apply.')
+      p.log.info('No pending changesets to apply (versions already reflect landed changes).')
     } else {
       p.log.step(`Applying ${pending.length} pending changeset(s)…`)
       runInherit('bun', ['run', 'version-packages'])
@@ -415,13 +467,23 @@ async function main() {
     process.exit(1)
   }
 
-  const ready = reports.filter((r) => r.ready)
+  const blocked = reports.filter((r) => r.status === 'blocked')
+  const ready = reports.filter((r) => r.status === 'ready')
   if (ready.length === 0) {
-    p.log.info('Nothing ready to publish (already on npm, or still blocked).')
-    console.log(`  ${pc.cyan('→')} bun run packages:changeset -- --auto`)
-    console.log(`  ${pc.cyan('→')} bun run packages:release`)
-    p.outro(pc.yellow('Nothing to publish.'))
-    process.exit(1)
+    if (blocked.length > 0) {
+      p.outro(pc.red('Nothing ready to publish — fix blocked packages above.'))
+      process.exit(1)
+    }
+    p.outro(
+      pc.green(
+        'Nothing new to publish — all wave packages are already on npm at their current versions.',
+      ),
+    )
+    process.exit(0)
+  }
+
+  if (blocked.length > 0) {
+    p.log.warn(`Continuing with ${ready.length} ready package(s); ${blocked.length} remain blocked.`)
   }
 
   await publishReady(ready, flags)
