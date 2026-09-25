@@ -33,7 +33,7 @@
     "postpack": "bun ../../scripts/package-exports-restore.ts"
   },
   "dependencies": {
-    "maplibre-gl": "^5.7.1"
+    "maplibre-gl": "^6.7.0"
   },
   "devDependencies": {
     "bun-types": "^1.2.20",

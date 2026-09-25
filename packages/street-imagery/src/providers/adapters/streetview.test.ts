@@ -69,7 +69,7 @@ describe('fetchStreetViewMetadata', () => {
   })
 
   it('returns null when the API key is missing', async () => {
-    env.VITE_GOOGLE_MAPS_API_KEY = undefined
+    delete env.VITE_GOOGLE_MAPS_API_KEY
     await expect(
       fetchStreetViewMetadata(37.4, -122.1, new AbortController().signal),
     ).resolves.toBeNull()
