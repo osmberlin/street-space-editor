@@ -1,6 +1,6 @@
 {
   "name": "@osm-editor-kit/osm-coverage",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "description": "Incremental OSM coverage fetching for map viewports with TanStack Query session state.",
   "homepage": "https://github.com/osmberlin/street-space-editor/tree/main/packages/osm-coverage",
   "license": "MIT",

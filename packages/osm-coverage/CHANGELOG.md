@@ -1,5 +1,11 @@
 # @osm-editor-kit/osm-coverage
 
+## 0.1.0-alpha.3
+
+### Patch Changes
+
+- - Fix install outside the OSM Editor Kit monorepo: the published `package.json` listed sibling kit packages as `workspace:*`, which npm cannot resolve. They now reference real versions.
+
 ## 0.1.0-alpha.2
 
 ### Patch Changes
