@@ -1,6 +1,6 @@
 {
   "name": "@osm-editor-kit/osm-maplibre",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "description": "MapLibre helpers for OSM editors: OpenFreeMap Positron style, overlay anchors, and metre-based paint.",
   "homepage": "https://github.com/osmberlin/street-space-editor/tree/main/packages/osm-maplibre",
   "license": "MIT",
