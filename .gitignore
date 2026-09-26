@@ -17,5 +17,5 @@ app/src/modes/parking/fixtures/dev-map-bbox.json
 research/street-space-editor--additional-research
 
 # Temporary export swap during npm pack/publish
-.package.json.dev-exports
-**/.package.json.dev-exports
+.package.json.dev-backup
+**/.package.json.dev-backup
