@@ -24,6 +24,7 @@
   },
   "changesets": [
     "gentle-tidy-anchors",
-    "installable-kit-packages"
+    "installable-kit-packages",
+    "registry-metadata-fix"
   ]
 }

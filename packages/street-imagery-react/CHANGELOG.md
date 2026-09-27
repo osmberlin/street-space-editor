@@ -1,5 +1,11 @@
 # @osm-editor-kit/street-imagery-react
 
+## 0.1.0-alpha.3
+
+### Patch Changes
+
+- - Installable outside the OSM Editor Kit monorepo: the previous alpha still listed sibling kit packages as `workspace:*` in npm's metadata.
+
 ## 0.1.0-alpha.2
 
 ### Patch Changes

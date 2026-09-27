@@ -13,7 +13,8 @@
  */
 
 import { spawn, spawnSync } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
@@ -290,7 +291,9 @@ function dirtyWavePackagePaths(): string[] {
 async function ensureChangesetCoverage() {
   const dirty = dirtyWavePackagePaths()
   if (dirty.length > 0) {
-    p.log.error('Uncommitted changes in wave packages — commit them first (finish-work), then re-run.')
+    p.log.error(
+      'Uncommitted changes in wave packages — commit them first (finish-work), then re-run.',
+    )
     for (const path of dirty.slice(0, 20)) {
       console.log(`  ${pc.yellow('•')} ${path}`)
     }
@@ -338,11 +341,11 @@ function commitVersionBumps() {
     env,
   })
   if (add.status !== 0) throw new Error(`git add failed:\n${add.stderr || add.stdout}`)
-  const commit = spawnSync(
-    'git',
-    ['commit', '-m', 'Chore: version packages for alpha publish'],
-    { cwd: ROOT, encoding: 'utf8', env },
-  )
+  const commit = spawnSync('git', ['commit', '-m', 'Chore: version packages for alpha publish'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    env,
+  })
   if (commit.status !== 0) {
     throw new Error(`git commit failed:\n${commit.stderr || commit.stdout}`)
   }
@@ -402,11 +405,24 @@ async function publishReady(ready: PackageReport[], flags: { yes: boolean; dryRu
   for (const [i, r] of ready.entries()) {
     const label = `${r.name}@${r.version}`
     p.log.step(`Publishing ${label} (${i + 1}/${ready.length})…`)
-    const result = await runAsync(
-      'npm',
-      ['publish', '--access', 'public', '--tag', 'alpha'],
-      { cwd: join(ROOT, DIR_BY_NAME[r.name]), inherit: true },
-    )
+    // Publish a packed tarball: `npm publish` in the package dir uploads registry metadata from
+    // package.json *before* prepack rewrites `workspace:*`, so installers would still see it.
+    const cwd = join(ROOT, DIR_BY_NAME[r.name])
+    const packDir = mkdtempSync(join(tmpdir(), 'osm-editor-kit-pack-'))
+    const build = await runAsync('bun', ['run', 'build'], { cwd, inherit: true })
+    const pack =
+      build.status === 0
+        ? await runAsync('npm', ['pack', '--pack-destination', packDir], { cwd, inherit: true })
+        : build
+    const tarball = readdirSync(packDir).find((file) => file.endsWith('.tgz'))
+    const result =
+      pack.status === 0 && tarball
+        ? await runAsync(
+            'npm',
+            ['publish', join(packDir, tarball), '--access', 'public', '--tag', 'alpha'],
+            { cwd, inherit: true },
+          )
+        : { ...pack, status: pack.status || 1 }
     if (result.status !== 0) {
       p.log.error(`Failed ${label}`)
       p.outro(
@@ -437,9 +453,7 @@ async function main() {
     const ready = reports.filter((r) => r.status === 'ready')
     const upToDate = reports.filter((r) => r.status === 'upToDate')
     p.outro(
-      pc.green(
-        `Check ok — ${ready.length} ready to publish, ${upToDate.length} already on npm.`,
-      ),
+      pc.green(`Check ok — ${ready.length} ready to publish, ${upToDate.length} already on npm.`),
     )
     return
   }
@@ -483,7 +497,9 @@ async function main() {
   }
 
   if (blocked.length > 0) {
-    p.log.warn(`Continuing with ${ready.length} ready package(s); ${blocked.length} remain blocked.`)
+    p.log.warn(
+      `Continuing with ${ready.length} ready package(s); ${blocked.length} remain blocked.`,
+    )
   }
 
   await publishReady(ready, flags)
