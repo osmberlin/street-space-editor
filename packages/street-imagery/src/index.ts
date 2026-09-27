@@ -45,3 +45,4 @@ export {
   getGoogleMapsApiKey,
   type StreetViewMetadataResponse,
 } from './providers/adapters/streetview'
+export * from './viewpoints'
