@@ -1,0 +1,30 @@
+import { describe, expect, it } from 'bun:test'
+import type { NormalizedPhoto } from '@osm-editor-kit/street-imagery'
+import { getViewpointSession } from './useViewpointSessionStore'
+
+const photo = (photoId: string): NormalizedPhoto => ({
+  providerId: 'mapillary',
+  photoId,
+  sequenceId: null,
+  capturedAt: null,
+  isPano: false,
+  heading: 0,
+  lngLat: [0, 0],
+})
+
+describe('viewpoint session history', () => {
+  it('steps back and forward, truncates forward history on a new photo, ignores repeats', () => {
+    const { showPhoto, back, forward } = getViewpointSession().actions
+    showPhoto({ photo: photo('a'), directionKey: 'here:N' })
+    showPhoto({ photo: photo('b'), directionKey: null })
+    showPhoto({ photo: photo('b'), directionKey: null })
+    expect(back()?.photo.photoId).toBe('a')
+    expect(forward()?.photo.photoId).toBe('b')
+    expect(forward()).toBeNull()
+    expect(getViewpointSession().current?.photo.photoId).toBe('b')
+    back()
+    showPhoto({ photo: photo('c'), directionKey: 'here:E' })
+    expect(forward()).toBeNull()
+    expect(back()?.photo.photoId).toBe('a')
+  })
+})

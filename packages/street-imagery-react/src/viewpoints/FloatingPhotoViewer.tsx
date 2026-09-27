@@ -1,0 +1,342 @@
+import type { ViewSuggestion } from '@osm-editor-kit/street-imagery'
+import {
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+  type PointerEvent,
+  type ReactNode,
+} from 'react'
+import { viewpointRoleLabel, viewSuggestionLabel } from './viewDirectionLabels'
+
+type Layout = { right: number; bottom: number; width: number; minimized: boolean }
+
+const DEFAULT_LAYOUT: Layout = { right: 16, bottom: 32, width: 420, minimized: false }
+const MIN_WIDTH = 280
+const EDGE = 8
+
+const readLayout = (storageKey: string): Layout => {
+  try {
+    const raw = localStorage.getItem(storageKey)
+    return raw ? { ...DEFAULT_LAYOUT, ...(JSON.parse(raw) as Partial<Layout>) } : DEFAULT_LAYOUT
+  } catch {
+    return DEFAULT_LAYOUT
+  }
+}
+
+const writeLayout = (storageKey: string, layout: Layout) => {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(layout))
+  } catch {
+    // Storage may be unavailable (private mode); layout just isn't remembered.
+  }
+}
+
+const Icon = ({ path, className = 'size-4' }: { path: string; className?: string }) => (
+  <svg
+    aria-hidden
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={1.75}
+    viewBox="0 0 24 24"
+  >
+    <path d={path} />
+  </svg>
+)
+
+const ICONS = {
+  back: 'M15 18l-6-6 6-6',
+  forward: 'M9 18l6-6-6-6',
+  close: 'M18 6 6 18M6 6l12 12',
+  minimize: 'M5 12h14',
+  expand: 'M4 14v6h6M20 10V4h-6M14 10l6-6M10 14l-6 6',
+  arrow: 'M12 20V5M6 11l6-6 6 6',
+}
+
+const ToolbarButton = ({
+  label,
+  onClick,
+  disabled,
+  children,
+}: {
+  label: string
+  onClick: () => void
+  disabled?: boolean
+  children: ReactNode
+}) => (
+  <button
+    aria-label={label}
+    className="inline-flex size-7 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+    disabled={disabled}
+    onClick={onClick}
+    title={label}
+    type="button"
+  >
+    {children}
+  </button>
+)
+
+const formatShortDate = (capturedAt: number | null | undefined) =>
+  capturedAt == null
+    ? '—'
+    : new Intl.DateTimeFormat('en', { year: '2-digit', month: 'short' }).format(capturedAt)
+
+const SuggestionChip = ({
+  suggestion,
+  active,
+  onSelect,
+}: {
+  suggestion: ViewSuggestion
+  active: boolean
+  onSelect: () => void
+}) => {
+  const best = suggestion.candidates[0]
+  const label = viewSuggestionLabel(suggestion)
+  return (
+    <button
+      aria-label={best ? label : `${label} (no photo)`}
+      aria-pressed={active}
+      className={[
+        'inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs whitespace-nowrap',
+        active
+          ? 'border-fuchsia-600 bg-fuchsia-600 text-white'
+          : best
+            ? 'border-slate-300 bg-white text-slate-700 hover:border-fuchsia-500'
+            : 'border-dashed border-slate-200 bg-white text-slate-400',
+      ].join(' ')}
+      disabled={!best}
+      onClick={onSelect}
+      title={best ? label : `${label}: no matching photo`}
+      type="button"
+    >
+      <span className="font-medium">{viewpointRoleLabel(suggestion.viewpoint.role)}</span>
+      <span
+        aria-hidden
+        className="inline-flex"
+        style={{ transform: `rotate(${suggestion.direction.bearing}deg)` }}
+      >
+        <Icon className="size-3" path={ICONS.arrow} />
+      </span>
+      <span className={active ? 'text-fuchsia-100' : 'text-slate-400'}>
+        {formatShortDate(best?.photo.capturedAt)}
+      </span>
+    </button>
+  )
+}
+
+export type FloatingPhotoViewerProps = {
+  title: ReactNode
+  /** Suggested views (viewpoint × direction); shown as chips. Empty hides the strip. */
+  suggestions: ViewSuggestion[]
+  activeDirectionKey: string | null
+  onSelectSuggestion: (suggestion: ViewSuggestion) => void
+  canGoBack: boolean
+  canGoForward: boolean
+  onBack: () => void
+  onForward: () => void
+  onClose: () => void
+  /** Short status line, e.g. "Loading…" or "No photos from the last 2 years". */
+  status?: ReactNode
+  /** Viewer body (provider panel). */
+  children?: ReactNode
+  footer?: ReactNode
+  /** Collapsible list below the footer, e.g. other photos near the click. */
+  drawer?: { label: ReactNode; content: ReactNode }
+  /** localStorage key for position, width and minimized state. */
+  storageKey?: string
+}
+
+/**
+ * Photo viewer box floating over the map. Render inside a positioned (relative) map container.
+ * Drag the header to move, drag the left edge to resize. Keys: Esc closes, [ and ] step history.
+ */
+export const FloatingPhotoViewer = ({
+  title,
+  suggestions,
+  activeDirectionKey,
+  onSelectSuggestion,
+  canGoBack,
+  canGoForward,
+  onBack,
+  onForward,
+  onClose,
+  status,
+  children,
+  footer,
+  drawer,
+  storageKey = 'street-imagery:floating-viewer',
+}: FloatingPhotoViewerProps) => {
+  const [layout, setLayout] = useState<Layout>(() => readLayout(storageKey))
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const dragRef = useRef<{ x: number; y: number; layout: Layout; mode: 'move' | 'resize' } | null>(
+    null,
+  )
+
+  const updateLayout = (next: Layout) => {
+    setLayout(next)
+    writeLayout(storageKey, next)
+  }
+
+  const onShortcut = useEffectEvent((event: KeyboardEvent) => {
+    const target = event.target
+    if (
+      target instanceof Element &&
+      target.closest('input, textarea, select, [contenteditable="true"]')
+    ) {
+      return
+    }
+    if (event.key === 'Escape') {
+      onClose()
+    } else if (event.key === '[' && canGoBack) {
+      onBack()
+    } else if (event.key === ']' && canGoForward) {
+      onForward()
+    }
+  })
+
+  useEffect(function subscribeKeyboardShortcuts() {
+    window.addEventListener('keydown', onShortcut)
+    return () => window.removeEventListener('keydown', onShortcut)
+  }, [])
+
+  const startDrag = (event: PointerEvent<HTMLElement>, mode: 'move' | 'resize') => {
+    if (event.button !== 0 || (event.target as HTMLElement).closest('button')) {
+      return
+    }
+    event.currentTarget.setPointerCapture(event.pointerId)
+    dragRef.current = { x: event.clientX, y: event.clientY, layout, mode }
+  }
+
+  const onDrag = (event: PointerEvent<HTMLElement>) => {
+    const drag = dragRef.current
+    if (!drag) {
+      return
+    }
+    const dx = event.clientX - drag.x
+    const dy = event.clientY - drag.y
+    setLayout(
+      drag.mode === 'move'
+        ? {
+            ...drag.layout,
+            right: Math.max(EDGE, drag.layout.right - dx),
+            bottom: Math.max(EDGE, drag.layout.bottom - dy),
+          }
+        : { ...drag.layout, width: Math.max(MIN_WIDTH, drag.layout.width - dx) },
+    )
+  }
+
+  const endDrag = () => {
+    if (dragRef.current) {
+      dragRef.current = null
+      writeLayout(storageKey, layout)
+    }
+  }
+
+  const dragHandlers = { onPointerMove: onDrag, onPointerUp: endDrag, onPointerCancel: endDrag }
+
+  if (layout.minimized) {
+    return (
+      <button
+        className="absolute z-10 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-medium text-slate-800 shadow-lg ring-1 ring-slate-200 hover:bg-slate-50"
+        onClick={() => updateLayout({ ...layout, minimized: false })}
+        style={{ right: layout.right, bottom: layout.bottom }}
+        type="button"
+      >
+        <Icon path={ICONS.expand} />
+        {title}
+      </button>
+    )
+  }
+
+  return (
+    <section
+      aria-label="Photo viewer"
+      className="absolute z-10 flex max-h-[calc(100%-1rem)] flex-col overflow-hidden rounded-xl bg-white shadow-xl ring-1 ring-slate-200"
+      style={{
+        right: layout.right,
+        bottom: layout.bottom,
+        width: `min(${layout.width}px, calc(100% - 1rem))`,
+      }}
+    >
+      <div
+        aria-hidden
+        className="absolute inset-y-0 left-0 z-10 w-1.5 cursor-ew-resize hover:bg-fuchsia-500/20"
+        onPointerDown={(event) => startDrag(event, 'resize')}
+        {...dragHandlers}
+      />
+      <header
+        className="flex cursor-move touch-none items-center gap-1 border-b border-slate-100 px-2 py-1.5 select-none"
+        onPointerDown={(event) => startDrag(event, 'move')}
+        {...dragHandlers}
+      >
+        <ToolbarButton disabled={!canGoBack} label="Previous photo in history ([)" onClick={onBack}>
+          <Icon path={ICONS.back} />
+        </ToolbarButton>
+        <ToolbarButton
+          disabled={!canGoForward}
+          label="Next photo in history (])"
+          onClick={onForward}
+        >
+          <Icon path={ICONS.forward} />
+        </ToolbarButton>
+        <h2 className="min-w-0 flex-1 truncate px-1 text-sm font-semibold text-slate-800">
+          {title}
+        </h2>
+        <ToolbarButton
+          label="Minimize"
+          onClick={() => updateLayout({ ...layout, minimized: true })}
+        >
+          <Icon path={ICONS.minimize} />
+        </ToolbarButton>
+        <ToolbarButton label="Close (Esc)" onClick={onClose}>
+          <Icon path={ICONS.close} />
+        </ToolbarButton>
+      </header>
+
+      {suggestions.length > 0 ? (
+        <nav
+          aria-label="Suggested views"
+          className="flex gap-1 overflow-x-auto border-b border-slate-100 px-2 py-1.5"
+        >
+          {suggestions.map((suggestion) => (
+            <SuggestionChip
+              active={suggestion.direction.key === activeDirectionKey}
+              key={suggestion.direction.key}
+              onSelect={() => onSelectSuggestion(suggestion)}
+              suggestion={suggestion}
+            />
+          ))}
+        </nav>
+      ) : null}
+
+      <div className="min-h-0 overflow-y-auto">
+        {status ? (
+          <p className="px-3 py-2 text-xs text-slate-500" role="status">
+            {status}
+          </p>
+        ) : null}
+        {children}
+        {footer ? <div className="px-3 py-2 text-xs text-slate-600">{footer}</div> : null}
+        {drawer ? (
+          <div className="border-t border-slate-100">
+            <button
+              aria-expanded={drawerOpen}
+              className="flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              onClick={() => setDrawerOpen((open) => !open)}
+              type="button"
+            >
+              {drawer.label}
+              <span aria-hidden className={drawerOpen ? 'inline-flex rotate-90' : 'inline-flex'}>
+                <Icon className="size-3.5" path={ICONS.forward} />
+              </span>
+            </button>
+            {drawerOpen ? <div className="px-2 pb-2">{drawer.content}</div> : null}
+          </div>
+        ) : null}
+      </div>
+    </section>
+  )
+}

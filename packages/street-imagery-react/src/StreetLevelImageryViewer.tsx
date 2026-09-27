@@ -19,6 +19,10 @@ type StreetLevelImageryViewerProps = {
   groupPhotos: NormalizedPhoto[]
   onPhotoSelected: (selection: StreetImageryPhotoSelection) => void
   onEaseMapToPoint: (lng: number, lat: number) => void
+  /** Mapillary only: full photo data for each image the viewer shows. */
+  onViewerPhoto?: (photo: NormalizedPhoto) => void
+  /** Mapillary 360° photos: initial view bearing (e.g. a suggested view direction). */
+  lookAtBearing?: number | null
 }
 
 const ViewerPanelPlaceholder = () => (
@@ -32,6 +36,8 @@ export const StreetLevelImageryViewer = ({
   groupPhotos,
   onPhotoSelected,
   onEaseMapToPoint,
+  onViewerPhoto,
+  lookAtBearing,
 }: StreetLevelImageryViewerProps) => {
   if (photo.providerId === 'mapillary') {
     return (
@@ -40,6 +46,8 @@ export const StreetLevelImageryViewer = ({
           groupPhotos={groupPhotos}
           onEaseMapToPoint={onEaseMapToPoint}
           onPhotoSelected={onPhotoSelected}
+          lookAtBearing={lookAtBearing}
+          onViewerPhoto={onViewerPhoto}
           photo={photo}
         />
       </Suspense>
