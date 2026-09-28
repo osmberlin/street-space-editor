@@ -55,6 +55,6 @@ export const mapillaryMapFeaturesAdapter: ProviderAdapter = {
   kind: 'mapFeature',
   label: 'Mapillary map features',
   color: '#A855F7',
-  minZoom: 12,
+  minZoom: 14,
   fetchMapFeatures,
 }

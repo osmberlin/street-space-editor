@@ -55,6 +55,6 @@ export const mapillarySignsAdapter: ProviderAdapter = {
   kind: 'mapFeature',
   label: 'Mapillary signs',
   color: '#E11D48',
-  minZoom: 12,
+  minZoom: 14,
   fetchMapFeatures,
 }

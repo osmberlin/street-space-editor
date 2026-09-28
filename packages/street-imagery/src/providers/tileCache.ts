@@ -1,4 +1,5 @@
-const MAX_RESOLVED_ENTRIES = 200
+/** Parsed tiles kept in memory; dense Mapillary tiles are large, so keep this small. */
+const MAX_RESOLVED_ENTRIES = 60
 
 type PendingEntry = {
   promise: Promise<unknown>

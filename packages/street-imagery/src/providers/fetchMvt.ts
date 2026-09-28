@@ -22,6 +22,8 @@ export const fetchMvt = async (
   url: string,
   tile: TileCoord,
   signal: AbortSignal,
+  /** Decode only these layers. Dense tiles (Mapillary: ~20k images) are expensive to convert. */
+  layerNames?: string[],
 ): Promise<MvtLayers> => {
   const response = await fetch(url, { signal })
   if (!response.ok) {
@@ -36,7 +38,7 @@ export const fetchMvt = async (
   const vectorTile = new VectorTile(new PbfReader(buffer))
   const layers: MvtLayers = {}
 
-  for (const layerName of Object.keys(vectorTile.layers)) {
+  for (const layerName of layerNames ?? Object.keys(vectorTile.layers)) {
     const layer = vectorTile.layers[layerName]
     if (!layer) {
       continue

@@ -6,6 +6,7 @@ import {
   mapFeaturesToFeatureCollection,
   photosToFeatureCollection,
   photosToViewfieldsFeatureCollection,
+  VIEWFIELD_MIN_ZOOM,
   sequencesToFeatureCollection,
 } from '@osm-editor-kit/street-imagery'
 import {
@@ -83,6 +84,16 @@ const FEATURE_CIRCLE_RADIUS: ['interpolate', ['linear'], ['zoom'], ...number[]] 
   4,
 ]
 
+/** Grow a bbox by `factor` of its size on each side. */
+const padBbox = ([west, south, east, north]: Bbox, factor: number): Bbox => {
+  const dx = (east - west) * factor
+  const dy = (north - south) * factor
+  return [west - dx, south - dy, east + dx, north + dy]
+}
+
+const lngLatInBbox = ([lng, lat]: [number, number], [west, south, east, north]: Bbox) =>
+  lng >= west && lng <= east && lat >= south && lat <= north
+
 const PHOTO_SORT_KEY: ExpressionSpecification = ['coalesce', ['get', 'capturedAt'], 0]
 const FEATURE_SORT_KEY: ExpressionSpecification = ['coalesce', ['get', 'lastSeenAt'], 0]
 
@@ -104,10 +115,21 @@ const PhotoProviderLayer = ({
       ? photos.filter((photo) => photoMatchesFilters(photo, filter?.photoTypes, filter?.date))
       : []
 
+  // Tiles reach far beyond the viewport; draw only nearby photos matching the filters so dense
+  // areas stay fast (the layer filter below still applies for style-only changes).
+  const drawBbox = bbox ? padBbox(bbox, 0.25) : null
   const photoCollection =
-    zoom >= adapter.minZoom ? photosToFeatureCollection(photos) : emptyPointCollection()
-  const viewfieldCollection = showViewfields
-    ? photosToViewfieldsFeatureCollection(visiblePhotos, zoom)
+    zoom >= adapter.minZoom
+      ? photosToFeatureCollection(
+          drawBbox
+            ? visiblePhotos.filter((photo) => lngLatInBbox(photo.lngLat, drawBbox))
+            : visiblePhotos,
+        )
+      : emptyPointCollection()
+  // Providers load whole tiles; draw viewfields only when zoomed in, and only for the viewport.
+  const viewfieldsActive = showViewfields && zoom >= VIEWFIELD_MIN_ZOOM
+  const viewfieldCollection = viewfieldsActive
+    ? photosToViewfieldsFeatureCollection(visiblePhotos, zoom, { bbox })
     : emptyPolygonCollection()
 
   const photoFilter = buildPhotoLayerFilter(filter?.photoTypes, filter?.date)
@@ -287,7 +309,7 @@ export type StreetLevelImagerySourcesAndLayersProps = {
   options: {
     config?: StreetImageryConfig
     showSequences?: boolean
-    /** Always-on heading wedges / 360° disks for every photo. Default true. */
+    /** Heading wedges / 360° disks per photo, from zoom 16, capped for dense areas. Default true. */
     showViewfields?: boolean
     showViewCone?: boolean
     showSelectionHighlight?: boolean

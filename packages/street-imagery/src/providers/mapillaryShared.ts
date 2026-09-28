@@ -18,14 +18,17 @@ export const fetchMapillaryMvtTiles = async (
   path: string,
   bbox: Bbox,
   signal: AbortSignal,
+  /** Decode only these layers; each set gets its own cache entry. */
+  layerNames?: string[],
 ) => {
   const tiles = tilesForBbox(bbox, MAPILLARY_TILE_ZOOM, { skipNullIsland: true })
   return collectSettledTiles(
     tiles.map((tile) => {
-      const key = getTileCacheKey(cachePrefix, tile)
+      const prefix = layerNames ? `${cachePrefix}:${layerNames.join(',')}` : cachePrefix
+      const key = getTileCacheKey(prefix, tile)
       return fetchTileCached(
         key,
-        (innerSignal) => fetchMvt(mapillaryTileUrl(path, tile), tile, innerSignal),
+        (innerSignal) => fetchMvt(mapillaryTileUrl(path, tile), tile, innerSignal, layerNames),
         signal,
       )
     }),

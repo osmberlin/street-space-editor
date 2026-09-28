@@ -51,11 +51,11 @@ export const normalizeMapillarySequenceFeature = (
   }
 }
 
-const fetchMapillaryTiles = async (bbox: Bbox, signal: AbortSignal) =>
-  fetchMapillaryMvtTiles('mapillary', MVT_PATH, bbox, signal)
+const fetchMapillaryTiles = async (bbox: Bbox, signal: AbortSignal, layer: 'image' | 'sequence') =>
+  fetchMapillaryMvtTiles('mapillary', MVT_PATH, bbox, signal, [layer])
 
 const fetchPhotos = async (bbox: Bbox, _zoom: number, signal: AbortSignal) => {
-  const tileLayers = await fetchMapillaryTiles(bbox, signal)
+  const tileLayers = await fetchMapillaryTiles(bbox, signal, 'image')
   const photos: NormalizedPhoto[] = []
 
   for (const layers of tileLayers) {
@@ -72,7 +72,7 @@ const fetchPhotos = async (bbox: Bbox, _zoom: number, signal: AbortSignal) => {
 }
 
 const fetchSequences = async (bbox: Bbox, _zoom: number, signal: AbortSignal) => {
-  const tileLayers = await fetchMapillaryTiles(bbox, signal)
+  const tileLayers = await fetchMapillaryTiles(bbox, signal, 'sequence')
   const sequences: NormalizedSequence[] = []
 
   for (const layers of tileLayers) {
@@ -93,7 +93,9 @@ export const mapillaryAdapter: ProviderAdapter = {
   kind: 'photo',
   label: 'Mapillary',
   color: '#05CB63',
-  minZoom: 12,
+  // Photo points only when zoomed in: one z14 tile holds up to ~20k images in dense cities.
+  minZoom: 15,
+  sequencesMinZoom: 12,
   fetchPhotos,
   fetchSequences,
 }

@@ -25,6 +25,9 @@ export {
   FLAT_VIEWFIELD_FOV_DEG,
   flatViewfieldTriangle,
   PANO_VIEWFIELD_FOV_DEG,
+  VIEWFIELD_MAX_FEATURES,
+  VIEWFIELD_MIN_ZOOM,
+  type ViewfieldOptions,
   photosToViewfieldsFeatureCollection,
   type ViewfieldPhotoProps,
 } from './map/viewfields'

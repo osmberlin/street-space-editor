@@ -211,6 +211,6 @@ export const kartaviewAdapter: ProviderAdapter = {
   kind: 'photo',
   label: 'KartaView',
   color: '#2563EB',
-  minZoom: 12,
+  minZoom: 14,
   fetchPhotos,
 }

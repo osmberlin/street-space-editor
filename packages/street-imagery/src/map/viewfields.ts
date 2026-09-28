@@ -1,12 +1,21 @@
 import type { Feature, FeatureCollection, Polygon } from 'geojson'
-import type { NormalizedPhoto } from '../providers/model'
-import { coneRadiusMeters, viewConeGeoJson } from './viewCone'
+import type { Bbox, NormalizedPhoto } from '../providers/model'
+import { coneRadiusMeters } from './viewCone'
 
 /** Narrow heading wedge for flat (directional) photos — iD-style viewfield. */
 export const FLAT_VIEWFIELD_FOV_DEG = 55
 
 /** Full disk for 360° / equirectangular photos. */
 export const PANO_VIEWFIELD_FOV_DEG = 360
+
+/** Viewfields only make sense (and stay cheap) when zoomed in on a few streets. */
+export const VIEWFIELD_MIN_ZOOM = 16
+
+/** Upper bound of viewfield polygons per provider; dense areas would otherwise freeze the map. */
+export const VIEWFIELD_MAX_FEATURES = 1500
+
+/** Corners of a 360° disk; small on screen, so a coarse polygon is enough. */
+const PANO_DISK_SEGMENTS = 12
 
 const METERS_PER_DEGREE_LAT = 111_320
 
@@ -50,6 +59,24 @@ export const flatViewfieldTriangle = (
   }
 }
 
+const panoDisk = (lngLat: [number, number], radiusMeters: number): Polygon => {
+  const ring: [number, number][] = []
+  for (let index = 0; index <= PANO_DISK_SEGMENTS; index += 1) {
+    ring.push(offsetMeters(lngLat[0], lngLat[1], (index * 360) / PANO_DISK_SEGMENTS, radiusMeters))
+  }
+  return { type: 'Polygon', coordinates: [ring] }
+}
+
+const inBbox = ([lng, lat]: [number, number], [west, south, east, north]: Bbox) =>
+  lng >= west && lng <= east && lat >= south && lat <= north
+
+export type ViewfieldOptions = {
+  /** Only photos inside this bbox (providers load whole tiles, far beyond the viewport). */
+  bbox?: Bbox | null
+  /** Newest photos win when there are more. Default `VIEWFIELD_MAX_FEATURES`. */
+  maxFeatures?: number
+}
+
 export type ViewfieldPhotoProps = {
   providerId: string
   photoId: string
@@ -68,11 +95,19 @@ export type ViewfieldPhotoProps = {
 export const photosToViewfieldsFeatureCollection = (
   photos: NormalizedPhoto[],
   zoom: number,
+  { bbox, maxFeatures = VIEWFIELD_MAX_FEATURES }: ViewfieldOptions = {},
 ): FeatureCollection<Polygon, ViewfieldPhotoProps> => {
-  const radius = coneRadiusMeters(zoom)
+  // Half-zoom steps: sizes barely change in between, and callers can reuse the result.
+  const radius = coneRadiusMeters(Math.floor(zoom * 2) / 2)
   const features: Feature<Polygon, ViewfieldPhotoProps>[] = []
 
-  for (const photo of photos) {
+  const inView = bbox ? photos.filter((photo) => inBbox(photo.lngLat, bbox)) : photos
+  const selected =
+    inView.length > maxFeatures
+      ? [...inView].sort((a, b) => (b.capturedAt ?? 0) - (a.capturedAt ?? 0)).slice(0, maxFeatures)
+      : inView
+
+  for (const photo of selected) {
     const isPano = photo.isPano === true
     if (!isPano && photo.heading == null) continue
 
@@ -86,9 +121,11 @@ export const photosToViewfieldsFeatureCollection = (
     }
 
     if (isPano) {
-      const bearing = photo.heading ?? 0
-      const disk = viewConeGeoJson(photo.lngLat, bearing, PANO_VIEWFIELD_FOV_DEG, radius)
-      features.push({ ...disk, properties: props })
+      features.push({
+        type: 'Feature',
+        properties: props,
+        geometry: panoDisk(photo.lngLat, radius),
+      })
       continue
     }
 

@@ -56,3 +56,27 @@ describe('photosToViewfieldsFeatureCollection', () => {
     expect(collection.features[0]!.properties.isPano).toBe(true)
   })
 })
+
+describe('photosToViewfieldsFeatureCollection limits', () => {
+  test('keeps only photos inside the bbox', () => {
+    const collection = photosToViewfieldsFeatureCollection(
+      [photo({ photoId: 'in' }), photo({ photoId: 'out', lngLat: [14, 53] })],
+      17,
+      { bbox: [13.3, 52.4, 13.5, 52.6] },
+    )
+    expect(collection.features.map((f) => f.properties.photoId)).toEqual(['in'])
+  })
+
+  test('caps the number of viewfields, newest first', () => {
+    const collection = photosToViewfieldsFeatureCollection(
+      [
+        photo({ photoId: 'old', capturedAt: 1 }),
+        photo({ photoId: 'new', capturedAt: 3 }),
+        photo({ photoId: 'mid', capturedAt: 2 }),
+      ],
+      17,
+      { maxFeatures: 2 },
+    )
+    expect(collection.features.map((f) => f.properties.photoId)).toEqual(['new', 'mid'])
+  })
+})
