@@ -25,6 +25,7 @@
   "changesets": [
     "gentle-tidy-anchors",
     "installable-kit-packages",
-    "registry-metadata-fix"
+    "registry-metadata-fix",
+    "viewpoint-photo-finder"
   ]
 }
