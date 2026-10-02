@@ -40,6 +40,7 @@ import {
 } from './hooks/useProviderData'
 import {
   resolveSelectedSequence,
+  SELECTION_COLOR,
   StreetLevelImagerySelectionOverlay,
 } from './StreetLevelImagerySelectionOverlay'
 import { StreetLevelImageryViewCone } from './StreetLevelImageryViewCone'
@@ -63,6 +64,8 @@ type ProviderLayerProps = {
   showViewfields: boolean
   photoCircleColor: DataDrivenPropertyValueSpecification<string>
   mapFeatureCircleColor: DataDrivenPropertyValueSpecification<string>
+  /** Sequence of the shown photo: its photos get the selection color as outline. */
+  activeSequenceId?: string | null
 }
 
 const CIRCLE_RADIUS: ['interpolate', ['linear'], ['zoom'], ...number[]] = [
@@ -110,6 +113,7 @@ const PhotoProviderLayer = ({
   showSequences,
   showViewfields,
   photoCircleColor,
+  activeSequenceId,
 }: ProviderLayerProps) => {
   const adapter = adapterById[providerId]
   const { data: photos = [] } = useProviderPhotos(providerId, bbox, zoom)
@@ -137,6 +141,12 @@ const PhotoProviderLayer = ({
     ? photosToViewfieldsFeatureCollection(visiblePhotos, zoom, { bbox })
     : emptyPolygonCollection()
 
+  // `''` never matches: photos without a sequence have `null`.
+  const inActiveSequence: ExpressionSpecification = [
+    '==',
+    ['get', 'sequenceId'],
+    activeSequenceId ?? '',
+  ]
   const photoFilter = buildPhotoLayerFilter(filter?.photoTypes, filter?.date)
   const photoSrcId = photoSourceId(providerId)
   const viewfieldSrcId = viewfieldSourceId(providerId)
@@ -247,8 +257,8 @@ const PhotoProviderLayer = ({
         paint={{
           'circle-radius': CIRCLE_RADIUS,
           'circle-color': photoCircleColor,
-          'circle-stroke-width': 1,
-          'circle-stroke-color': '#ffffff',
+          'circle-stroke-width': ['case', inActiveSequence, 2, 1],
+          'circle-stroke-color': ['case', inActiveSequence, SELECTION_COLOR, '#ffffff'],
         }}
       />
     </>
@@ -395,6 +405,11 @@ export const StreetLevelImagerySourcesAndLayers = ({
             bbox={bbox}
             filter={filter}
             mapFeatureCircleColor={mapFeatureCircleColor}
+            activeSequenceId={
+              providerId === selectedProviderId
+                ? (selectedSequenceId ?? selectedPhoto?.sequenceId)
+                : null
+            }
             photoCircleColor={photoCircleColor}
             providerId={providerId}
             showSequences={showSequences}
