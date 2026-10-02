@@ -3,8 +3,16 @@ import { collectSettledTiles, fetchTileCached, getTileCacheKey } from '../tileCa
 import { tileBbox, tilesForBbox } from '../tileMath'
 
 const API_URL = 'https://kartaview.org/1.0/list/nearby-photos/'
-const TILE_ZOOM = 14
+/**
+ * KartaView's server answers in time only for small areas: in central Berlin a 110 m radius takes
+ * 10 s and 300 m runs into its 25 s timeout (measured 2026-10-02; the time grows with the number
+ * of photos found). So photos load in small tiles (about 150 m) and only when zoomed in.
+ */
+const TILE_ZOOM = 18
+const MIN_ZOOM = 18
 const RESULTS_PER_PAGE = 1000
+/** A tile this small rarely has more photos; a second page covers dense spots. */
+const MAX_PAGES = 2
 
 export type KartaviewItem = {
   id?: string | number
@@ -32,25 +40,6 @@ export const kartaviewImageUrl = (imagePath: string): string => {
 
 type KartaviewResponse = {
   currentPageItems?: KartaviewItem[]
-}
-
-export const maxPageAtZoom = (z: number): number => {
-  if (z < 15) {
-    return 2
-  }
-  if (z === 15) {
-    return 5
-  }
-  if (z === 16) {
-    return 10
-  }
-  if (z === 17) {
-    return 20
-  }
-  if (z === 18) {
-    return 40
-  }
-  return 80
 }
 
 export const parseKartaviewDate = (value: unknown): number | null => {
@@ -113,8 +102,8 @@ export const normalizeKartaviewItem = (
 }
 
 // The documented bbox params (bbTopLeft/bbBottomRight) now return HTTP 400 from the API;
-// only the coordinate+radius form still works, and radius fails above ~1500 m.
-const MAX_RADIUS_METERS = 1400
+// only the coordinate+radius form still works.
+const MAX_RADIUS_METERS = 160
 
 const tileCenterAndRadius = (tile: TileCoord): { lng: number; lat: number; radius: number } => {
   const [west, south, east, north] = tileBbox(tile)
@@ -129,14 +118,13 @@ const tileCenterAndRadius = (tile: TileCoord): { lng: number; lat: number; radiu
 
 const fetchKartaviewTilePhotos = async (
   tile: TileCoord,
-  maxPages: number,
   signal: AbortSignal,
 ): Promise<NormalizedPhoto[]> => {
   const [west, south, east, north] = tileBbox(tile)
   const { lng, lat, radius } = tileCenterAndRadius(tile)
   const photos: NormalizedPhoto[] = []
 
-  for (let page = 1; page <= maxPages; page += 1) {
+  for (let page = 1; page <= MAX_PAGES; page += 1) {
     const body = new URLSearchParams({
       ipp: String(RESULTS_PER_PAGE),
       page: String(page),
@@ -144,21 +132,27 @@ const fetchKartaviewTilePhotos = async (
       radius: String(radius),
     })
 
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      signal,
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body.toString(),
-    })
-
-    if (!response.ok) {
-      break
+    // The server often times out on the first request for an area and answers the next one
+    // fast, so try twice. A tile that still fails throws: it must not be cached as empty.
+    let data: KartaviewResponse | null = null
+    for (let attempt = 1; attempt <= 2 && !data; attempt += 1) {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        signal,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+      })
+      const json = (await response.json().catch(() => null)) as
+        | (KartaviewResponse & { status?: { httpCode?: number } })
+        | null
+      if (response.ok && json?.status?.httpCode === 200) {
+        data = json
+      }
     }
-
-    const data = (await response.json()) as KartaviewResponse & {
-      status?: { httpCode?: number }
-    }
-    if (data.status?.httpCode !== 200) {
+    if (!data) {
+      if (page === 1) {
+        throw new Error('KartaView did not answer for this tile')
+      }
       break
     }
 
@@ -186,22 +180,15 @@ const fetchKartaviewTilePhotos = async (
   return photos
 }
 
-const fetchKartaviewTile = async (tile: TileCoord, maxPages: number, signal: AbortSignal) => {
-  // Page count depends on map zoom, so the cache key must include it — otherwise a
-  // tile cached at low zoom (fewer pages) would silently miss photos at high zoom.
-  const key = getTileCacheKey(`kartaview:${maxPages}`, tile)
-  return fetchTileCached(
-    key,
-    (innerSignal) => fetchKartaviewTilePhotos(tile, maxPages, innerSignal),
-    signal,
-  )
+const fetchKartaviewTile = async (tile: TileCoord, signal: AbortSignal) => {
+  const key = getTileCacheKey('kartaview', tile)
+  return fetchTileCached(key, (innerSignal) => fetchKartaviewTilePhotos(tile, innerSignal), signal)
 }
 
-const fetchPhotos = async (bbox: Bbox, zoom: number, signal: AbortSignal) => {
-  const maxPages = Math.min(maxPageAtZoom(zoom), 5) // Politeness cap: iD allows up to 80 pages at high zoom
+const fetchPhotos = async (bbox: Bbox, _zoom: number, signal: AbortSignal) => {
   const tiles = tilesForBbox(bbox, TILE_ZOOM, { skipNullIsland: true })
   const tileResults = await collectSettledTiles(
-    tiles.map((tile) => fetchKartaviewTile(tile, maxPages, signal)),
+    tiles.map((tile) => fetchKartaviewTile(tile, signal)),
   )
   return tileResults.flat()
 }
@@ -211,6 +198,6 @@ export const kartaviewAdapter: ProviderAdapter = {
   kind: 'photo',
   label: 'KartaView',
   color: '#2563EB',
-  minZoom: 14,
+  minZoom: MIN_ZOOM,
   fetchPhotos,
 }

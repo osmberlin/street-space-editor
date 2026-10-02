@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import {
-  maxPageAtZoom,
-  normalizeKartaviewItem,
-  parseKartaviewDate,
-  type KartaviewItem,
-} from './kartaview'
+import { normalizeKartaviewItem, parseKartaviewDate, type KartaviewItem } from './kartaview'
 
 const berlinFixture: KartaviewItem = {
   id: '1320765953',
@@ -27,17 +22,6 @@ const bucharestFixture: KartaviewItem = {
   date_added: '2023-06-17 10:52:00',
   heading: '259.93',
 }
-
-describe('maxPageAtZoom', () => {
-  it('matches iD pagination limits', () => {
-    expect(maxPageAtZoom(14)).toBe(2)
-    expect(maxPageAtZoom(15)).toBe(5)
-    expect(maxPageAtZoom(16)).toBe(10)
-    expect(maxPageAtZoom(17)).toBe(20)
-    expect(maxPageAtZoom(18)).toBe(40)
-    expect(maxPageAtZoom(19)).toBe(80)
-  })
-})
 
 describe('parseKartaviewDate', () => {
   it('parses shot_date timestamps', () => {
