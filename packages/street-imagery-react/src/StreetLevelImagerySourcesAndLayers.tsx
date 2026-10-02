@@ -377,6 +377,16 @@ export const StreetLevelImagerySourcesAndLayers = ({
     selectedSequenceId ?? selectedPhoto?.sequenceId,
   )
 
+  // The shown photo's sequence goes below the lowest photo layer, so dots stay on top of it.
+  const firstPhotoProvider = providers.find(
+    (id) => adapterById[id].kind === 'photo' && adapterById[id].fetchPhotos,
+  )
+  const sequenceBeforeId = firstPhotoProvider
+    ? showViewfields
+      ? viewfieldLayerId(firstPhotoProvider)
+      : photoLayerId(firstPhotoProvider)
+    : undefined
+
   return (
     <>
       {providers.map((providerId) => (
@@ -404,8 +414,10 @@ export const StreetLevelImagerySourcesAndLayers = ({
 
       {showSelectionHighlight ? (
         <StreetLevelImagerySelectionOverlay
+          cameraLngLat={viewerPov?.lngLat}
           selectedPhoto={selectedPhoto}
           selectedSequence={selectedSequence}
+          sequenceBeforeId={sequenceBeforeId}
         />
       ) : null}
     </>
