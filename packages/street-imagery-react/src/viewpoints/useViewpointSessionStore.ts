@@ -28,6 +28,8 @@ type ViewpointSessionStore = {
     back: () => ViewpointHistoryEntry | null
     forward: () => ViewpointHistoryEntry | null
     close: () => void
+    /** Like `close`, and forget the history too: the viewer was closed. */
+    reset: () => void
   }
 }
 
@@ -87,6 +89,14 @@ const useViewpointSessionStore = create<ViewpointSessionStore>()((set, get) => (
       return entry
     },
     close: () => set({ viewpoints: [], line: null, activeDirectionKey: null }),
+    reset: () =>
+      set({
+        viewpoints: [],
+        line: null,
+        activeDirectionKey: null,
+        history: [],
+        historyIndex: -1,
+      }),
   },
 }))
 
