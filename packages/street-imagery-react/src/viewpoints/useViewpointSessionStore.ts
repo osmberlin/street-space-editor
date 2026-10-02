@@ -23,7 +23,10 @@ type ViewpointSessionStore = {
   historyIndex: number
   actions: {
     open: (input: OpenInput) => void
-    /** Show a photo; truncates forward history. No-op when it is already the current photo. */
+    /**
+     * Show a photo; truncates forward history. For the photo that is shown already, only its
+     * direction changes.
+     */
     showPhoto: (entry: ViewpointHistoryEntry) => void
     back: () => ViewpointHistoryEntry | null
     forward: () => ViewpointHistoryEntry | null
@@ -57,9 +60,16 @@ const useViewpointSessionStore = create<ViewpointSessionStore>()((set, get) => (
       set((state) => {
         const current = state.history[state.historyIndex]
         if (samePhoto(current?.photo, entry.photo)) {
-          return entry.directionKey != null && entry.directionKey !== state.activeDirectionKey
-            ? { activeDirectionKey: entry.directionKey }
-            : state
+          // The same photo for another view (a 360° photo serves several): no new history
+          // step, but the entry takes the new direction, so the viewer turns to it.
+          if (entry.directionKey == null || entry.directionKey === current?.directionKey) {
+            return entry.directionKey != null && entry.directionKey !== state.activeDirectionKey
+              ? { activeDirectionKey: entry.directionKey }
+              : state
+          }
+          const history = [...state.history]
+          history[state.historyIndex] = { ...entry }
+          return { history, activeDirectionKey: entry.directionKey }
         }
         const history = [...state.history.slice(0, state.historyIndex + 1), entry].slice(
           -HISTORY_LIMIT,

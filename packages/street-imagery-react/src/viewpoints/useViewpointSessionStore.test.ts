@@ -27,4 +27,15 @@ describe('viewpoint session history', () => {
     expect(forward()).toBeNull()
     expect(back()?.photo.photoId).toBe('a')
   })
+
+  it('gives the shown photo a new direction without a new history step', () => {
+    const { showPhoto, reset, back } = getViewpointSession().actions
+    reset()
+    showPhoto({ photo: photo('first'), directionKey: null })
+    showPhoto({ photo: photo('pano'), directionKey: 'start:forward' })
+    showPhoto({ photo: photo('pano'), directionKey: 'start:back' })
+    expect(getViewpointSession().current?.directionKey).toBe('start:back')
+    // One step back is the first photo: the direction change added no step.
+    expect(back()?.photo.photoId).toBe('first')
+  })
 })
