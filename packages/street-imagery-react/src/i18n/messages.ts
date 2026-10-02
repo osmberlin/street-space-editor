@@ -1,5 +1,5 @@
 import {
-  humanizeMapillaryValue,
+  mapillaryValueName,
   type StreetImageryLocale,
   type ViewDirection,
   type ViewpointRole,
@@ -74,7 +74,7 @@ const en: StreetImageryMessages = {
     }
   },
   feature: {
-    name: humanizeMapillaryValue,
+    name: (value) => mapillaryValueName(value, 'en'),
     seen: 'Seen',
     noPhotos: 'Mapillary lists no photos for this feature.',
     daysSummary: (photos, days) => `${photos} photos on ${days} days`,
@@ -121,8 +121,7 @@ const de: StreetImageryMessages = {
     }
   },
   feature: {
-    // Mapillary has no German names; a host app can map values to its own sign catalogue.
-    name: humanizeMapillaryValue,
+    name: (value) => mapillaryValueName(value, 'de'),
     seen: 'Gesehen',
     noPhotos: 'Mapillary führt keine Fotos zu diesem Objekt.',
     daysSummary: (photos, days) => `${photos} Fotos an ${days} Tagen`,

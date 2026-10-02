@@ -6,7 +6,7 @@
 ### @osm-editor-kit/street-imagery
 
 - **Locales**: `STREET_IMAGERY_LOCALES` (`en`, `de`), and date helpers on date-fns: `formatDate`, `formatMonth`, `formatRelativeDate`, `formatDateTooltip`. `dayLabels` takes a `StreetImageryLocale`.
-- `humanizeMapillaryValue`, and `NormalizedPhoto.creatorName`.
+- `mapillaryValueName(value, locale)`: German names for signs found in Germany and for all objects and markings; other values get the German category and the English name. `humanizeMapillaryValue`, and `NormalizedPhoto.creatorName`.
 - New dependency: `date-fns`.
 
 ### @osm-editor-kit/street-imagery-react
