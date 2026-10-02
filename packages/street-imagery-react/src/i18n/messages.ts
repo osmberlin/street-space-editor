@@ -25,7 +25,6 @@ export type StreetImageryMessages = {
   viewpointRole: Record<ViewpointRole, string>
   /** Eight compass points, clockwise from north: N, NE, E, SE, S, SW, W, NW. */
   compass: readonly string[]
-  photoType: { pano: string; flat: string }
   unknownDate: string
   /** e.g. "Start, looking along the street"; `role` is the viewpoint's label. */
   viewDirection: (role: string, kind: ViewDirection['kind']) => string
@@ -54,7 +53,6 @@ const en: StreetImageryMessages = {
     custom: 'View',
   },
   compass: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
-  photoType: { pano: '360° photo', flat: 'Flat photo' },
   viewDirection: (role, kind) => {
     switch (kind) {
       case 'forward':
@@ -99,7 +97,6 @@ const de: StreetImageryMessages = {
     custom: 'Blick',
   },
   compass: ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'],
-  photoType: { pano: '360°-Foto', flat: 'Normales Foto' },
   viewDirection: (role, kind) => {
     switch (kind) {
       case 'forward':

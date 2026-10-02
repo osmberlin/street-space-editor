@@ -7,8 +7,8 @@ import {
   type PointerEvent,
   type ReactNode,
 } from 'react'
+import { PhotoCount } from '../i18n/PhotoCount'
 import { PhotoDate } from '../i18n/PhotoDate'
-import { PhotoTypeIcon } from '../i18n/PhotoTypeIcon'
 import { useStreetImageryI18n } from '../i18n/StreetImageryLocaleProvider'
 import { viewSuggestionLabel } from './viewDirectionLabels'
 
@@ -147,18 +147,20 @@ const SuggestionChip = ({
             : ''}
           {messages.compass[Math.round(suggestion.direction.bearing / 45) % 8]}
         </span>
-        {shown ? <PhotoTypeIcon isPano={shown.photo.isPano} /> : null}
+        {/* Only the active view counts: a click on it shows its next photo. */}
+        {canStep && shownIndex >= 0 ? (
+          <PhotoCount
+            className="font-normal text-fuchsia-100"
+            index={shownIndex + 1}
+            total={candidates.length}
+          />
+        ) : null}
       </span>
       {shown ? (
-        <span className={`max-w-full truncate ${active ? 'text-fuchsia-100' : 'text-slate-400'}`}>
-          <PhotoDate timestamp={shown.photo.capturedAt} />
-          {candidates.length > 1 ? (
-            <span className="ml-1 tabular-nums">
-              {shownIndex >= 0 ? `${shownIndex + 1}/` : ''}
-              {candidates.length}
-            </span>
-          ) : null}
-        </span>
+        <PhotoDate
+          className={`max-w-full truncate ${active ? 'text-fuchsia-100' : 'text-slate-400'}`}
+          timestamp={shown.photo.capturedAt}
+        />
       ) : (
         <span className="text-slate-400">—</span>
       )}

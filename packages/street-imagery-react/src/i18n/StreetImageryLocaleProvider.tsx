@@ -33,7 +33,6 @@ const mergeMessages = (
         viewer: { ...base.viewer, ...overrides.viewer },
         viewpointRole: { ...base.viewpointRole, ...overrides.viewpointRole },
         compass: overrides.compass?.length === 8 ? overrides.compass : base.compass,
-        photoType: { ...base.photoType, ...overrides.photoType },
         viewDirection: overrides.viewDirection ?? base.viewDirection,
       }
     : base
