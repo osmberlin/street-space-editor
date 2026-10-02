@@ -88,7 +88,7 @@ describe('viewpoints', () => {
     const across = here
       ? viewDirections(here).filter((d) => d.kind === 'right' || d.kind === 'left')
       : []
-    expect(across.map((d) => Math.round(d.bearing))).toEqual([180, 0])
+    expect(across.map((d) => Math.round(d.bearing) % 360)).toEqual([180, 0])
   })
 
   it('line click next to an end is merged into that end', () => {
