@@ -217,5 +217,11 @@ export const kartaviewAdapter: ProviderAdapter = {
   label: 'KartaView',
   color: '#2563EB',
   minZoom: MIN_ZOOM,
+  // The track lines of kartaview.org's own map. Below zoom 12 the tile server is too slow.
+  coverageTiles: {
+    url: 'https://api.kartaview.org/2.0/sequence/tiles/{x}/{y}/{z}.png',
+    tileSize: 256,
+    minZoom: 12,
+  },
   fetchPhotos,
 }

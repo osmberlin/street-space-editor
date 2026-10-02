@@ -129,6 +129,11 @@ export type ProviderAdapter = {
    * is requested and hosts can show "not available here". Unset: worldwide.
    */
   coverage?: { bbox: Bbox; label: string }
+  /**
+   * Ready-made image tiles of the provider's tracks (`{z}`, `{x}`, `{y}` in the URL). They show
+   * where imagery exists at zooms where single photos are not loaded. Not clickable.
+   */
+  coverageTiles?: { url: string; tileSize: number; minZoom: number }
   fetchPhotos?: (bbox: Bbox, zoom: number, signal: AbortSignal) => Promise<NormalizedPhoto[]>
   fetchSequences?: (bbox: Bbox, zoom: number, signal: AbortSignal) => Promise<NormalizedSequence[]>
   fetchMapFeatures?: (

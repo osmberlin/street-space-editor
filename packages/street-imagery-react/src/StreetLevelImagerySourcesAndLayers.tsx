@@ -282,6 +282,24 @@ const PhotoProviderLayer = ({
 
   return (
     <>
+      {adapter.coverageTiles ? (
+        <>
+          <Source
+            id={`coverage-tiles-source-${providerId}`}
+            minzoom={adapter.coverageTiles.minZoom}
+            tileSize={adapter.coverageTiles.tileSize}
+            tiles={[adapter.coverageTiles.url]}
+            type="raster"
+          />
+          <Layer
+            id={`coverage-tiles-${providerId}`}
+            minzoom={adapter.coverageTiles.minZoom}
+            paint={{ 'raster-opacity': 0.7 }}
+            source={`coverage-tiles-source-${providerId}`}
+            type="raster"
+          />
+        </>
+      ) : null}
       {adapter.fetchSequences && showSequences ? (
         <>
           <Source
