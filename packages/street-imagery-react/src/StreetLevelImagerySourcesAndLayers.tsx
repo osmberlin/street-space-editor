@@ -97,6 +97,34 @@ const padBbox = ([west, south, east, north]: Bbox, factor: number): Bbox => {
 const lngLatInBbox = ([lng, lat]: [number, number], [west, south, east, north]: Bbox) =>
   lng >= west && lng <= east && lat >= south && lat <= north
 
+const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000
+/** Fixed at load, so the layer paint stays stable between renders. */
+const LOADED_AT = Date.now()
+
+/**
+ * Lines and dots fade with age: black for the last 12 months, then one step lighter per year,
+ * down to the grey of muted lines. Solid greys, not opacity, so overlapping dots and lines stay
+ * clean. Photos without a date are black.
+ */
+const AGE_SHADE: ExpressionSpecification = [
+  'case',
+  ['==', ['get', 'capturedAt'], null],
+  BASE_COLOR,
+  [
+    'step',
+    ['get', 'capturedAt'],
+    '#909090',
+    LOADED_AT - 4 * YEAR_MS,
+    '#7a7a7a',
+    LOADED_AT - 3 * YEAR_MS,
+    '#595959',
+    LOADED_AT - 2 * YEAR_MS,
+    '#383838',
+    LOADED_AT - YEAR_MS,
+    BASE_COLOR,
+  ],
+]
+
 const PHOTO_SORT_KEY: ExpressionSpecification = ['coalesce', ['get', 'capturedAt'], 0]
 const FEATURE_SORT_KEY: ExpressionSpecification = ['coalesce', ['get', 'lastSeenAt'], 0]
 
@@ -265,7 +293,7 @@ const PhotoProviderLayer = ({
               'line-sort-key': ['case', inActiveSequence, 1, 0],
             }}
             paint={{
-              'line-color': BASE_COLOR,
+              'line-color': AGE_SHADE,
               'line-width': ['case', inActiveSequence, ACTIVE_LINE_WIDTH, 1.25],
               'line-opacity': lineOpacity,
             }}
@@ -322,7 +350,7 @@ const PhotoProviderLayer = ({
         layout={{ 'circle-sort-key': PHOTO_SORT_KEY }}
         paint={{
           'circle-radius': dotRadius,
-          'circle-color': BASE_COLOR,
+          'circle-color': AGE_SHADE,
         }}
       />
     </>
