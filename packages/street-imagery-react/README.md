@@ -148,3 +148,20 @@ const { toggle, disarm } = useLocationPickActions()
 ```
 
 The map's own click handlers still run; skip them while `armed` is set if the click should only open the place. When the place is known already (a selected feature), call `openLocationInNewTab` directly instead.
+
+## Photo details dialog (optional)
+
+A modal with everything known about the shown photo: capture, camera, position, source and raw EXIF. It lives in its own entry, so apps that do not import it do not bundle it.
+
+```tsx
+import { FloatingViewerInfoButton } from '@osm-editor-kit/street-imagery-react'
+import { PHOTO_DETAILS_LABELS, PhotoDetailsDialog } from '@osm-editor-kit/street-imagery-react/photo-details'
+
+<FloatingPhotoViewer
+  titleActions={<FloatingViewerInfoButton label={PHOTO_DETAILS_LABELS.en.open} onClick={() => setOpen(true)} />}
+  …
+/>
+<PhotoDetailsDialog open={open} photo={viewerPhoto} onClose={() => setOpen(false)} />
+```
+
+`viewerPhoto` is what `onViewerPhoto` of the viewer gives (Mapillary, Panoramax).

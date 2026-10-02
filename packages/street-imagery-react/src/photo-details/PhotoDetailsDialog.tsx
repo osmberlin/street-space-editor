@@ -7,6 +7,7 @@ import {
 } from '@osm-editor-kit/street-imagery'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { useStreetImageryI18n } from '../i18n/StreetImageryLocaleProvider'
+import { PHOTO_DETAILS_LABELS, type PhotoDetailsLabels } from './labels'
 
 export type PhotoDetailsDialogProps = {
   /** The photo with its `details`, as a viewer's `onViewerPhoto` gives it. */
@@ -15,6 +16,8 @@ export type PhotoDetailsDialogProps = {
   onClose: () => void
   /** Link to the photo on the provider's site, shown at the photo id. */
   externalUrl?: string
+  /** Replace single texts; the rest follows the `StreetImageryLocaleProvider`'s language. */
+  labels?: Partial<PhotoDetailsLabels>
 }
 
 const formatBytes = (bytes: number) =>
@@ -47,15 +50,19 @@ const Section = ({ title, rows }: { title: string; rows: [string, ReactNode][] }
  * Everything known about a photo, as a modal: capture, camera, position, source and raw EXIF.
  * Replaces the providers' own legends (Panoramax's drawer), which do not fit a small viewer box.
  * A native `<dialog>`: Escape and a click on the backdrop close it.
+ *
+ * Lives in its own entry (`@osm-editor-kit/street-imagery-react/photo-details`), so apps that do
+ * not import it do not bundle it.
  */
 export const PhotoDetailsDialog = ({
   photo,
   open,
   onClose,
   externalUrl,
+  labels,
 }: PhotoDetailsDialogProps) => {
-  const { locale, messages } = useStreetImageryI18n()
-  const t = messages.details
+  const { locale } = useStreetImageryI18n()
+  const t = { ...PHOTO_DETAILS_LABELS[locale], ...labels }
   const dialogRef = useRef<HTMLDialogElement>(null)
 
   useEffect(

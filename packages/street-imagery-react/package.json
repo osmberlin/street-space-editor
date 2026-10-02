@@ -15,7 +15,8 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./photo-details": "./src/photo-details/index.ts"
   },
   "publishConfig": {
     "access": "public",
@@ -61,6 +62,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./photo-details": {
+      "types": "./dist/photo-details/index.d.ts",
+      "import": "./dist/photo-details.js"
     },
     "./package.json": "./package.json"
   }
