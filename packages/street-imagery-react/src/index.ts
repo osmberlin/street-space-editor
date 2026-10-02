@@ -44,3 +44,5 @@ export {
   type MapillaryViewerOutline,
 } from './panels/mapillaryLookAt'
 export * from './mapillary/useMapillaryFeatures'
+export { LocationPickOnMap, type LocationPickOnMapProps } from './openers/LocationPickOnMap'
+export * from './openers/useLocationPickStore'

@@ -75,3 +75,15 @@ await fetchImageDetections(imageId, { filter: matchesAnyGroup(JUNCTION_DETECTION
 ## Viewpoints and other providers
 
 `viewpointFromPoint`, `viewpointsFromLine`, `viewpointsIntoNode` build viewpoints; `rankPhotosForDirection` ranks photos per view direction. Photos come from a `ViewpointPhotoSource` (`{ id, fetchNear }`): `mapillaryPhotoSource` and `streetViewPhotoSource` ship with the package (Street View needs `googleMapsApiKey` in the config; the package reads no env vars). Write your own source for other providers, e.g. Infra3D.
+
+## Open a place in another service
+
+`LOCATION_OPENERS` / `locationOpenerById` hold one opener per service (the photo providers plus infra3D). Each has `locationUrl(target)`, a plain link that works as an `<a href>`, and where the service allows it `lookAtUrl(target)`, which finds the nearest image and turns it to the place (Mapillary; Google Street View with `googleMapsApiKey`). `openLocationInNewTab(opener, target)` opens the tab first and then resolves the look-at link, so popup blockers let it through; call it directly in a click handler.
+
+```ts
+import { locationOpenerById, openLocationInNewTab } from '@osm-editor-kit/street-imagery'
+
+openLocationInNewTab(locationOpenerById.mapillary, { lngLat: [13.38886, 52.51704], zoom: 17 })
+```
+
+**infra3D** has no public coverage data, so it is an opener only and needs a project: `createStreetImageryConfig({ infra3d: { projectUid } })`. `buildInfra3dUrl` builds the three link kinds (`jumpTo`, `lookAt`, `imageKey` with optional `pointTo`; they exclude each other). The opener uses `lookAt` without a height: infra3D then looks at the ground at that point from the nearest image (within 100 m). Only people with an infra3D account get past its login page.

@@ -120,3 +120,21 @@ const { data: detections } = useMapillaryImageDetections(photo.photoId, {
 - Map layers: `filter.mapFeatureValue` limits which signs/objects are drawn (`matchesAnyGroup(SIGN_GROUPS)`).
 - Suggested views: `useViewSuggestions(viewpoints, { sources: [mapillaryPhotoSource, streetViewPhotoSource] })`.
 - `turnMapillaryViewerTo` / `setMapillaryViewerOutlines` work on a mapillary-js `Viewer` you own.
+
+## Pick a place on the map to open elsewhere
+
+A button arms a location opener (see `@osm-editor-kit/street-imagery`), the next map click opens the clicked place in that service and disarms; Escape cancels.
+
+```tsx
+import { LocationPickOnMap, useArmedLocationOpenerId, useLocationPickActions } from '@osm-editor-kit/street-imagery-react'
+
+const armed = useArmedLocationOpenerId() // show it: pressed button, crosshair cursor, a hint on the map
+const { toggle, disarm } = useLocationPickActions()
+
+<button aria-pressed={armed === 'infra3d'} onClick={() => toggle('infra3d')}>In infra3D öffnen</button>
+<Map cursor={armed ? 'crosshair' : undefined}>
+  <LocationPickOnMap />
+</Map>
+```
+
+The map's own click handlers still run; skip them while `armed` is set if the click should only open the place. When the place is known already (a selected feature), call `openLocationInNewTab` directly instead.
