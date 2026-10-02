@@ -164,13 +164,6 @@ const fetchSequences = async (bbox: Bbox, _zoom: number, signal: AbortSignal) =>
 
 export const mapilioAdapter: ProviderAdapter = {
   id: 'mapilio',
-  kind: 'photo',
-  label: 'Mapilio',
-  color: '#0D9488',
-  minZoom: 14,
-  defaultEnabled: false,
-  browserUnavailableReason:
-    'Mapilio’s tile server (geo.mapilio.com) does not allow browser requests from other sites (CORS). Coverage dots cannot load until Mapilio fixes this upstream.',
   fetchPhotos,
   fetchSequences,
 }

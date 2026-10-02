@@ -52,9 +52,5 @@ const fetchMapFeatures = async (bbox: Bbox, _zoom: number, signal: AbortSignal) 
 
 export const mapillarySignsAdapter: ProviderAdapter = {
   id: 'mapillary-signs',
-  kind: 'mapFeature',
-  label: 'Mapillary signs',
-  color: '#E11D48',
-  minZoom: 14,
   fetchMapFeatures,
 }

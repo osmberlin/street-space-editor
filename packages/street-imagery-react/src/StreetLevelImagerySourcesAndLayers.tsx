@@ -20,6 +20,7 @@ import {
 import type { Bbox, NormalizedPhoto } from '@osm-editor-kit/street-imagery'
 import {
   adapterById,
+  providerById,
   featureLayerId,
   featureSourceId,
   photoLayerId,
@@ -139,11 +140,12 @@ const PhotoProviderLayer = ({
   shownPhotoId,
 }: ProviderLayerProps) => {
   const adapter = adapterById[providerId]
+  const meta = providerById[providerId]
   const { data: photos = [] } = useProviderPhotos(providerId, bbox, zoom)
   const { data: sequences = [] } = useProviderSequences(providerId, bbox, zoom)
 
   const visiblePhotos =
-    zoom >= adapter.minZoom
+    zoom >= meta.minZoom
       ? photos.filter((photo) => photoMatchesFilters(photo, filter?.photoTypes, filter?.date))
       : []
 
@@ -151,7 +153,7 @@ const PhotoProviderLayer = ({
   // areas stay fast (the layer filter below still applies for style-only changes).
   const drawBbox = bbox ? padBbox(bbox, 0.25) : null
   const photoCollection =
-    zoom >= adapter.minZoom
+    zoom >= meta.minZoom
       ? photosToFeatureCollection(
           drawBbox
             ? visiblePhotos.filter((photo) => lngLatInBbox(photo.lngLat, drawBbox))
@@ -222,7 +224,7 @@ const PhotoProviderLayer = ({
   }
 
   const filteredSequences =
-    showSequences && zoom >= (adapter.sequencesMinZoom ?? adapter.minZoom)
+    showSequences && zoom >= meta.sequencesMinZoom
       ? sequences
           .map((sequence) => {
             if (sequence.capturedAt != null) return sequence
@@ -282,25 +284,25 @@ const PhotoProviderLayer = ({
 
   return (
     <>
-      {adapter.coverageTiles ? (
+      {meta.coverageTiles ? (
         <>
           <Source
             id={`coverage-tiles-source-${providerId}`}
-            minzoom={adapter.coverageTiles.minZoom}
-            tileSize={adapter.coverageTiles.tileSize}
-            tiles={[adapter.coverageTiles.url]}
+            minzoom={meta.coverageTiles.minZoom}
+            tileSize={meta.coverageTiles.tileSize}
+            tiles={[meta.coverageTiles.url]}
             type="raster"
           />
           <Layer
             id={`coverage-tiles-${providerId}`}
-            minzoom={adapter.coverageTiles.minZoom}
+            minzoom={meta.coverageTiles.minZoom}
             paint={{ 'raster-opacity': 0.7 }}
             source={`coverage-tiles-source-${providerId}`}
             type="raster"
           />
         </>
       ) : null}
-      {adapter.fetchSequences && showSequences ? (
+      {adapter?.fetchSequences && showSequences ? (
         <>
           <Source
             key={sequenceSourceId(providerId)}
@@ -389,12 +391,12 @@ const MapFeatureProviderLayer = ({
   filter,
   mapFeatureCircleColor,
 }: ProviderLayerProps) => {
-  const adapter = adapterById[providerId]
+  const meta = providerById[providerId]
   const { data: features = [] } = useProviderMapFeatures(providerId, bbox, zoom)
 
   const valueFilter = filter?.mapFeatureValue
   const featureCollection =
-    zoom >= adapter.minZoom
+    zoom >= meta.minZoom
       ? mapFeaturesToFeatureCollection(
           valueFilter ? features.filter((feature) => valueFilter(feature.value)) : features,
         )
@@ -428,8 +430,7 @@ const MapFeatureProviderLayer = ({
 }
 
 const ProviderLayer = (props: ProviderLayerProps) => {
-  const adapter = adapterById[props.providerId]
-  return adapter.kind === 'mapFeature' ? (
+  return providerById[props.providerId].kind === 'mapFeature' ? (
     <MapFeatureProviderLayer {...props} />
   ) : (
     <PhotoProviderLayer {...props} />
@@ -515,7 +516,7 @@ export const StreetLevelImagerySourcesAndLayers = ({
 
   // The shown photo's sequence goes below the lowest photo layer, so dots stay on top of it.
   const firstPhotoProvider = providers.find(
-    (id) => adapterById[id].kind === 'photo' && adapterById[id].fetchPhotos,
+    (id) => providerById[id].kind === 'photo' && adapterById[id]?.fetchPhotos,
   )
   const sequenceBeforeId = firstPhotoProvider
     ? showViewfields

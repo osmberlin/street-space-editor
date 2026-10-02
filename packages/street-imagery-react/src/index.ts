@@ -50,6 +50,10 @@ export * from './mapillary/useMapillaryFeatures'
 export { LocationPickOnMap, type LocationPickOnMapProps } from './openers/LocationPickOnMap'
 export * from './openers/useLocationPickStore'
 export { MapillaryFeatureBar, type MapillaryFeatureBarProps } from './mapillary/MapillaryFeatureBar'
+export {
+  MAPILLARY_FEATURE_BAR_LABELS,
+  type MapillaryFeatureBarLabels,
+} from './mapillary/featureBarLabels'
 export { STREET_IMAGERY_MESSAGES, type StreetImageryMessages } from './i18n/messages'
 export {
   StreetImageryLocaleProvider,

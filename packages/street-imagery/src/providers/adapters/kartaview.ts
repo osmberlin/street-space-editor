@@ -9,7 +9,6 @@ const API_URL = 'https://kartaview.org/1.0/list/nearby-photos/'
  * of photos found). So photos load in small tiles (about 150 m) and only when zoomed in.
  */
 const TILE_ZOOM = 18
-const MIN_ZOOM = 18
 const RESULTS_PER_PAGE = 1000
 /** A tile this small rarely has more photos; a second page covers dense spots. */
 const MAX_PAGES = 2
@@ -213,15 +212,5 @@ const fetchPhotos = async (bbox: Bbox, _zoom: number, signal: AbortSignal) => {
 
 export const kartaviewAdapter: ProviderAdapter = {
   id: 'kartaview',
-  kind: 'photo',
-  label: 'KartaView',
-  color: '#2563EB',
-  minZoom: MIN_ZOOM,
-  // The track lines of kartaview.org's own map. Below zoom 12 the tile server is too slow.
-  coverageTiles: {
-    url: 'https://api.kartaview.org/2.0/sequence/tiles/{x}/{y}/{z}.png',
-    tileSize: 256,
-    minZoom: 12,
-  },
   fetchPhotos,
 }

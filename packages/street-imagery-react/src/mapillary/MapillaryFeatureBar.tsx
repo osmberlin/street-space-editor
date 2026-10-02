@@ -7,11 +7,14 @@ import {
 } from '@osm-editor-kit/street-imagery'
 import { PhotoDate } from '../i18n/PhotoDate'
 import { useStreetImageryI18n } from '../i18n/StreetImageryLocaleProvider'
+import { MAPILLARY_FEATURE_BAR_LABELS, type MapillaryFeatureBarLabels } from './featureBarLabels'
 
 export type MapillaryFeatureBarProps = {
   data: MapFeatureImages
   shownImage: TargetImage | null
   onShow: (image: TargetImage) => void
+  /** Replace single texts, e.g. `name` to map values to your own sign catalogue. */
+  labels?: Partial<MapillaryFeatureBarLabels>
 }
 
 /**
@@ -20,9 +23,14 @@ export type MapillaryFeatureBarProps = {
  * that day's photos. Dates show month and year; the tooltip has the full date and the age.
  * Texts and dates follow the `StreetImageryLocaleProvider`.
  */
-export const MapillaryFeatureBar = ({ data, shownImage, onShow }: MapillaryFeatureBarProps) => {
-  const { locale, messages } = useStreetImageryI18n()
-  const labels = messages.feature
+export const MapillaryFeatureBar = ({
+  data,
+  shownImage,
+  onShow,
+  labels: labelOverrides,
+}: MapillaryFeatureBarProps) => {
+  const { locale } = useStreetImageryI18n()
+  const labels = { ...MAPILLARY_FEATURE_BAR_LABELS[locale], ...labelOverrides }
   const { feature, days, images } = data
   return (
     <div className="space-y-1.5">

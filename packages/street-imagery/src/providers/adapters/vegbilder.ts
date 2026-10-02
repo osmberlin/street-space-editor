@@ -1,5 +1,6 @@
 import type { Feature } from 'geojson'
 import { pointLngLat } from '../fetchMvt'
+import { NORWAY_BBOX } from '../meta'
 import type { Bbox, NormalizedPhoto, ProviderAdapter, TileCoord } from '../model'
 import { collectSettledTiles, fetchTileCached, getTileCacheKey } from '../tileCache'
 import { bboxIntersects, tileBbox, tilesForBbox } from '../tileMath'
@@ -7,7 +8,6 @@ import { bboxIntersects, tileBbox, tilesForBbox } from '../tileMath'
 const TILE_ZOOM = 14
 const OWS_BASE = 'https://www.vegvesen.no/kart/ogc/vegbilder_1_0/ows'
 const CAPABILITIES_URL = `${OWS_BASE}?service=WFS&request=GetCapabilities&version=2.0.0`
-const NORWAY_BBOX: Bbox = [4, 57, 32, 72]
 const LAYER_NAME_REGEX = /vegbilder_1_0:Vegbilder(_360)?_(\d{4})/g
 
 export type VegbilderLayerInfo = {
@@ -227,10 +227,5 @@ const fetchPhotos = async (bbox: Bbox, _zoom: number, signal: AbortSignal) => {
 
 export const vegbilderAdapter: ProviderAdapter = {
   id: 'vegbilder',
-  kind: 'photo',
-  label: 'Vegbilder',
-  color: '#EA580C',
-  minZoom: 14,
-  coverage: { bbox: NORWAY_BBOX, label: 'Norway' },
   fetchPhotos,
 }

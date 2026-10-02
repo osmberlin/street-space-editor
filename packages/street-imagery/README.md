@@ -18,19 +18,42 @@ For MapLibre React layers, use `@osm-editor-kit/street-imagery-react`.
 
 ```ts
 import {
-  adapterById,
   createStreetImageryConfig,
   photosToFeatureCollection,
+  registerProviderAdapters,
   setStreetImageryConfig,
 } from '@osm-editor-kit/street-imagery'
+import { mapillaryAdapter } from '@osm-editor-kit/street-imagery/providers/mapillary'
 
 setStreetImageryConfig(createStreetImageryConfig({ mapillaryToken: '…' }))
+registerProviderAdapters([mapillaryAdapter])
 
 const bbox = [13.44, 52.47, 13.45, 52.48] as const // west, south, east, north
 const controller = new AbortController()
-const photos = await adapterById.mapillary.fetchPhotos!(bbox, 16, controller.signal)
+const photos = await mapillaryAdapter.fetchPhotos!(bbox, 16, controller.signal)
 const geojson = photosToFeatureCollection(photos)
 ```
+
+### Only bundle the providers you use
+
+Each provider's fetching code is its own entry. Register the ones your app shows; the others are
+not bundled.
+
+| Entry                                | Adapter                                   |
+| ------------------------------------ | ----------------------------------------- |
+| `…/providers/mapillary`              | `mapillaryAdapter` (photos and sequences) |
+| `…/providers/mapillary-signs`        | `mapillarySignsAdapter`                   |
+| `…/providers/mapillary-map-features` | `mapillaryMapFeaturesAdapter`             |
+| `…/providers/panoramax`              | `panoramaxAdapter`                        |
+| `…/providers/kartaview`              | `kartaviewAdapter`                        |
+| `…/providers/mapilio`                | `mapilioAdapter`                          |
+| `…/providers/streetside`             | `streetsideAdapter` (needs `bingMapsKey`) |
+| `…/providers/vegbilder`              | `vegbilderAdapter`                        |
+| `…/providers/all`                    | `ALL_PROVIDER_ADAPTERS`                   |
+
+Names, colours and zoom limits of all providers (`PROVIDERS`, `providerById`) and the "open in …"
+links (`getLocationOpeners()`) need no adapter. Google Street View and Apple Look Around have no
+adapter: they show nothing on the map.
 
 ## Mapillary: images, map features, detections
 

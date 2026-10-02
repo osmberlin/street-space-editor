@@ -1,5 +1,5 @@
 import { peekStreetImageryConfig } from '../../config'
-import type { NormalizedPhoto, ProviderAdapter } from '../model'
+import type { NormalizedPhoto } from '../model'
 
 const STREET_VIEW_METADATA_API = 'https://maps.googleapis.com/maps/api/streetview/metadata'
 
@@ -84,13 +84,4 @@ export const fetchStreetViewMetadata = async (
   }
 
   return { providerId: 'streetview', ...normalized }
-}
-
-export const streetViewAdapter: ProviderAdapter = {
-  id: 'streetview',
-  kind: 'photo',
-  label: 'Google Street View',
-  color: '#EA4335',
-  minZoom: 0,
-  defaultEnabled: false,
 }

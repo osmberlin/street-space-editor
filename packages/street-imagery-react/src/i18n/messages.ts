@@ -1,5 +1,4 @@
 import {
-  mapillaryValueName,
   type StreetImageryLocale,
   type ViewDirection,
   type ViewpointRole,
@@ -27,16 +26,6 @@ export type StreetImageryMessages = {
   unknownDate: string
   /** e.g. "Start, looking along the street"; `role` is the viewpoint's label. */
   viewDirection: (role: string, kind: ViewDirection['kind']) => string
-  feature: {
-    /** Name of a Mapillary value like `regulatory--turn-right-ahead--g1`. */
-    name: (value: string) => string
-    /** Line below the name; `first` and `last` are the rendered dates. */
-    seen: string
-    noPhotos: string
-    daysSummary: (photos: number, days: number) => string
-    /** Third tooltip line of a day button, below date and age. */
-    dayPhotos: (photos: number, canStep: boolean) => string
-  }
 }
 
 const en: StreetImageryMessages = {
@@ -72,14 +61,6 @@ const en: StreetImageryMessages = {
       default:
         return `${role}, looking ${kind}`
     }
-  },
-  feature: {
-    name: (value) => mapillaryValueName(value, 'en'),
-    seen: 'Seen',
-    noPhotos: 'Mapillary lists no photos for this feature.',
-    daysSummary: (photos, days) => `${photos} photos on ${days} days`,
-    dayPhotos: (photos, canStep) =>
-      `${photos} photo${photos === 1 ? '' : 's'}${canStep ? ' — click for the next one' : ''}`,
   },
 }
 
@@ -119,14 +100,6 @@ const de: StreetImageryMessages = {
       default:
         return `${role}, Blick nach ${COMPASS_DE[kind] ?? kind}`
     }
-  },
-  feature: {
-    name: (value) => mapillaryValueName(value, 'de'),
-    seen: 'Gesehen',
-    noPhotos: 'Mapillary führt keine Fotos zu diesem Objekt.',
-    daysSummary: (photos, days) => `${photos} Fotos an ${days} Tagen`,
-    dayPhotos: (photos, canStep) =>
-      `${photos} Foto${photos === 1 ? '' : 's'}${canStep ? ' — klicken für das nächste' : ''}`,
   },
 }
 

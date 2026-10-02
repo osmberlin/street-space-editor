@@ -52,9 +52,5 @@ const fetchMapFeatures = async (bbox: Bbox, _zoom: number, signal: AbortSignal) 
 
 export const mapillaryMapFeaturesAdapter: ProviderAdapter = {
   id: 'mapillary-map-features',
-  kind: 'mapFeature',
-  label: 'Mapillary map features',
-  color: '#A855F7',
-  minZoom: 14,
   fetchMapFeatures,
 }

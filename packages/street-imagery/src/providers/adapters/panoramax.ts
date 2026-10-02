@@ -132,11 +132,6 @@ const fetchSequences = async (bbox: Bbox, zoom: number, signal: AbortSignal) => 
 
 export const panoramaxAdapter: ProviderAdapter = {
   id: 'panoramax',
-  kind: 'photo',
-  label: 'Panoramax',
-  color: '#7C3AED',
-  minZoom: 15,
-  sequencesMinZoom: 10,
   fetchPhotos,
   fetchSequences,
 }

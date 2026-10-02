@@ -134,9 +134,5 @@ const fetchPhotos = async (bbox: Bbox, _zoom: number, signal: AbortSignal) => {
 
 export const streetsideAdapter: ProviderAdapter = {
   id: 'streetside',
-  kind: 'photo',
-  label: 'Bing Streetside',
-  color: '#0891B2',
-  minZoom: 14,
   fetchPhotos,
 }

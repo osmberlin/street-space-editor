@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'bun:test'
 import { providerExternalLink } from '../../viewer/externalLinks'
+import { providerById } from '../meta'
 import type { NormalizedPhoto } from '../model'
-import { encodeLookAroundMvs, lookAroundDeepLink, lookaroundAdapter } from './lookaround'
+import { adapterById } from '../registry'
+import { encodeLookAroundMvs, lookAroundDeepLink } from './lookaround'
 
 describe('encodeLookAroundMvs', () => {
   it('encodes lat/lng/altitude as a base64 protobuf matching Apple share links', () => {
@@ -36,12 +38,12 @@ describe('lookAroundDeepLink', () => {
   })
 })
 
-describe('lookaroundAdapter', () => {
-  it('is a click-only photo provider without fetchPhotos', () => {
-    expect(lookaroundAdapter.id).toBe('lookaround')
-    expect(lookaroundAdapter.kind).toBe('photo')
-    expect(lookaroundAdapter.defaultEnabled).toBe(false)
-    expect(lookaroundAdapter.fetchPhotos).toBeUndefined()
+describe('lookaround provider', () => {
+  it('is click-only: no adapter, off by default', () => {
+    expect(providerById.lookaround.kind).toBe('photo')
+    expect(providerById.lookaround.clickOnly).toBe(true)
+    expect(providerById.lookaround.defaultEnabled).toBe(false)
+    expect(adapterById.lookaround).toBeUndefined()
   })
 })
 

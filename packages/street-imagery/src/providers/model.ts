@@ -111,29 +111,9 @@ export type NormalizedSequence = {
   isPano: boolean | null
 }
 
+/** The code that fetches one provider's map data. Names, colours and limits are in `ProviderMeta`. */
 export type ProviderAdapter = {
   id: ProviderId
-  kind: ProviderKind
-  label: string
-  color: string
-  /** Minimum map zoom before photo markers are fetched. */
-  minZoom: number
-  /** Minimum map zoom before sequence lines are fetched (defaults to minZoom). */
-  sequencesMinZoom?: number
-  /** When false, provider is omitted from the default enabled set. */
-  defaultEnabled?: boolean
-  /** When set, map layers cannot load in the browser (e.g. upstream CORS). */
-  browserUnavailableReason?: string
-  /**
-   * The only area the provider has imagery in, with a name for it ("Norway"). Outside it nothing
-   * is requested and hosts can show "not available here". Unset: worldwide.
-   */
-  coverage?: { bbox: Bbox; label: string }
-  /**
-   * Ready-made image tiles of the provider's tracks (`{z}`, `{x}`, `{y}` in the URL). They show
-   * where imagery exists at zooms where single photos are not loaded. Not clickable.
-   */
-  coverageTiles?: { url: string; tileSize: number; minZoom: number }
   fetchPhotos?: (bbox: Bbox, zoom: number, signal: AbortSignal) => Promise<NormalizedPhoto[]>
   fetchSequences?: (bbox: Bbox, zoom: number, signal: AbortSignal) => Promise<NormalizedSequence[]>
   fetchMapFeatures?: (

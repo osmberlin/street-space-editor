@@ -1,5 +1,10 @@
 import type { Bbox } from '@osm-editor-kit/street-imagery'
-import { adapterById, providerCoversBbox, type ProviderId } from '@osm-editor-kit/street-imagery'
+import {
+  adapterById,
+  providerById,
+  providerCoversBbox,
+  type ProviderId,
+} from '@osm-editor-kit/street-imagery'
 import { useQuery } from '@tanstack/react-query'
 
 const bboxKey = (bbox: Bbox | null) =>
@@ -14,18 +19,20 @@ const withinBbox = (bbox: Bbox) => (item: { lngLat: [number, number] }) => {
 }
 
 export const useProviderPhotos = (providerId: ProviderId, bbox: Bbox | null, zoom: number) => {
+  // No adapter registered for the provider: nothing to load.
   const adapter = adapterById[providerId]
+  const meta = providerById[providerId]
   const enabled =
-    adapter.kind === 'photo' &&
+    meta.kind === 'photo' &&
     bbox != null &&
     providerCoversBbox(providerId, bbox) &&
-    zoom >= adapter.minZoom &&
-    adapter.fetchPhotos != null
+    zoom >= meta.minZoom &&
+    adapter?.fetchPhotos != null
 
   return useQuery({
     queryKey: ['provider-photos', providerId, bboxKey(bbox), zoom],
     queryFn: async ({ signal }) => {
-      const photos = await adapter.fetchPhotos!(bbox as Bbox, zoom, signal)
+      const photos = await adapter!.fetchPhotos!(bbox as Bbox, zoom, signal)
       return photos.filter(withinBbox(bbox as Bbox))
     },
     enabled,
@@ -34,36 +41,40 @@ export const useProviderPhotos = (providerId: ProviderId, bbox: Bbox | null, zoo
 }
 
 export const useProviderSequences = (providerId: ProviderId, bbox: Bbox | null, zoom: number) => {
+  // No adapter registered for the provider: nothing to load.
   const adapter = adapterById[providerId]
-  const sequencesMinZoom = adapter.sequencesMinZoom ?? adapter.minZoom
+  const meta = providerById[providerId]
+  const sequencesMinZoom = meta.sequencesMinZoom
   const enabled =
-    adapter.kind === 'photo' &&
+    meta.kind === 'photo' &&
     bbox != null &&
     providerCoversBbox(providerId, bbox) &&
     zoom >= sequencesMinZoom &&
-    adapter.fetchSequences != null
+    adapter?.fetchSequences != null
 
   return useQuery({
     queryKey: ['provider-sequences', providerId, bboxKey(bbox), zoom],
-    queryFn: ({ signal }) => adapter.fetchSequences?.(bbox as Bbox, zoom, signal) ?? [],
+    queryFn: ({ signal }) => adapter?.fetchSequences?.(bbox as Bbox, zoom, signal) ?? [],
     enabled,
     placeholderData: (previous) => previous,
   })
 }
 
 export const useProviderMapFeatures = (providerId: ProviderId, bbox: Bbox | null, zoom: number) => {
+  // No adapter registered for the provider: nothing to load.
   const adapter = adapterById[providerId]
+  const meta = providerById[providerId]
   const enabled =
-    adapter.kind === 'mapFeature' &&
+    meta.kind === 'mapFeature' &&
     bbox != null &&
     providerCoversBbox(providerId, bbox) &&
-    zoom >= adapter.minZoom &&
-    adapter.fetchMapFeatures != null
+    zoom >= meta.minZoom &&
+    adapter?.fetchMapFeatures != null
 
   return useQuery({
     queryKey: ['provider-map-features', providerId, bboxKey(bbox), zoom],
     queryFn: async ({ signal }) => {
-      const features = await adapter.fetchMapFeatures!(bbox as Bbox, zoom, signal)
+      const features = await adapter!.fetchMapFeatures!(bbox as Bbox, zoom, signal)
       return features.filter(withinBbox(bbox as Bbox))
     },
     enabled,

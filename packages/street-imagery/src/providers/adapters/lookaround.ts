@@ -1,5 +1,3 @@
-import type { ProviderAdapter } from '../model'
-
 /** Default camera altitude (meters) used in Apple Maps Look Around share `_mvs` blobs. */
 const DEFAULT_LOOK_AROUND_ALTITUDE_M = 50
 
@@ -58,11 +56,3 @@ export const lookAroundDeepLink = (lat: number, lng: number): string => {
  * Link-out-only provider: no official bulk coverage listing API.
  * Map clicks open Apple Maps Look Around at the clicked coordinate.
  */
-export const lookaroundAdapter: ProviderAdapter = {
-  id: 'lookaround',
-  kind: 'photo',
-  label: 'Apple Look Around',
-  color: '#007AFF',
-  minZoom: 0,
-  defaultEnabled: false,
-}
