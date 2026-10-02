@@ -74,8 +74,8 @@ export const StreetLevelImageryViewCone = ({
         source={CONE_SOURCE_ID}
         paint={{
           'line-color': SELECTION_COLOR,
-          'line-width': 1.5,
-          'line-opacity': 0.9,
+          'line-width': 0.75,
+          'line-opacity': 0.5,
         }}
       />
     </>

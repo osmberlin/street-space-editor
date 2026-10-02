@@ -4,7 +4,7 @@ import {
   sequencesToFeatureCollection,
 } from '@osm-editor-kit/street-imagery'
 import type { Bbox, NormalizedPhoto, NormalizedSequence } from '@osm-editor-kit/street-imagery'
-import type { FeatureCollection, LineString, Point } from 'geojson'
+import type { FeatureCollection, LineString, MultiLineString, Point } from 'geojson'
 import { Layer, Source } from 'react-map-gl/maplibre'
 
 const POINTS_SOURCE_ID = 'selection-highlight'
@@ -16,6 +16,54 @@ export const SELECTION_COLOR = '#f97316'
 
 /** Below this distance the photo dot and the viewer's camera position count as the same spot. */
 const SAME_POSITION_METERS = 0.75
+
+/**
+ * Sequence lines come simplified from the vector tiles, so they pass near the photo, not through
+ * it. Within this distance the nearest corner of the line is moved onto the photo marker.
+ */
+const SNAP_LINE_METERS = 6
+
+/** Move the corner of the lines that is nearest to `point` onto it (when within reach). */
+const snapNearestCorner = (
+  collection: FeatureCollection<LineString | MultiLineString>,
+  point: [number, number],
+): FeatureCollection<LineString | MultiLineString> => {
+  let best: { coordinates: number[]; distance: number } | null = null
+  for (const feature of collection.features) {
+    const lines =
+      feature.geometry.type === 'LineString'
+        ? [feature.geometry.coordinates]
+        : feature.geometry.coordinates
+    for (const coordinates of lines.flat()) {
+      const [lng, lat] = coordinates
+      if (lng == null || lat == null) {
+        continue
+      }
+      const distance = distanceMeters([lng, lat], point)
+      if (distance <= SNAP_LINE_METERS && (!best || distance < best.distance)) {
+        best = { coordinates, distance }
+      }
+    }
+  }
+  if (!best) {
+    return collection
+  }
+  const corner = best.coordinates
+  const move = (coordinates: number[]) => (coordinates === corner ? point : coordinates)
+  return {
+    ...collection,
+    features: collection.features.map((feature) => ({
+      ...feature,
+      geometry:
+        feature.geometry.type === 'LineString'
+          ? { ...feature.geometry, coordinates: feature.geometry.coordinates.map(move) }
+          : {
+              ...feature.geometry,
+              coordinates: feature.geometry.coordinates.map((line) => line.map(move)),
+            },
+    })),
+  }
+}
 
 export type StreetLevelImagerySelectionOverlayProps = {
   selectedPhoto?: NormalizedPhoto | null
@@ -31,7 +79,7 @@ export type StreetLevelImagerySelectionOverlayProps = {
 
 /**
  * The shown photo on the map, bottom to top: its sequence (thin line with a white casing, below
- * the photo dots), a ring around its photo dot, and — when the camera position differs from the
+ * the photo dots), a filled marker on its photo dot, and — when the camera position differs from the
  * dot — a dashed connector and a pin at the camera position.
  */
 export const StreetLevelImagerySelectionOverlay = ({
@@ -40,19 +88,23 @@ export const StreetLevelImagerySelectionOverlay = ({
   cameraLngLat,
   sequenceBeforeId,
 }: StreetLevelImagerySelectionOverlayProps) => {
-  const sequenceCollection = selectedSequence
+  const photoLngLat = selectedPhoto?.lngLat
+  const cameraDiffers =
+    photoLngLat != null &&
+    cameraLngLat != null &&
+    distanceMeters(photoLngLat, cameraLngLat) > SAME_POSITION_METERS
+  const camera = cameraDiffers ? cameraLngLat : null
+  // Same spot: take the viewer's position, so marker and view cone share one point exactly.
+  const dot = photoLngLat && cameraLngLat && !cameraDiffers ? cameraLngLat : photoLngLat
+
+  const sequenceLines: FeatureCollection<LineString | MultiLineString> = selectedSequence
     ? sequencesToFeatureCollection([selectedSequence])
     : emptyLineCollection()
+  const sequenceCollection = dot ? snapNearestCorner(sequenceLines, dot) : sequenceLines
 
   if (!selectedPhoto && sequenceCollection.features.length === 0) {
     return null
   }
-
-  const dot = selectedPhoto?.lngLat
-  const camera =
-    dot && cameraLngLat && distanceMeters(dot, cameraLngLat) > SAME_POSITION_METERS
-      ? cameraLngLat
-      : null
 
   const points: FeatureCollection<Point, { kind: 'dot' | 'camera' }> = {
     type: 'FeatureCollection',
@@ -120,18 +172,17 @@ export const StreetLevelImagerySelectionOverlay = ({
       />
 
       <Source id={POINTS_SOURCE_ID} type="geojson" data={points} />
-      {/* A ring, so the photo dot below stays visible. */}
+      {/* Covers the photo dot below it. */}
       <Layer
         id="selection-highlight-layer"
         type="circle"
         source={POINTS_SOURCE_ID}
         filter={['==', ['get', 'kind'], 'dot']}
         paint={{
-          'circle-radius': 9,
+          'circle-radius': 6,
           'circle-color': SELECTION_COLOR,
-          'circle-opacity': 0.12,
-          'circle-stroke-width': 2.5,
-          'circle-stroke-color': SELECTION_COLOR,
+          'circle-stroke-width': 1.5,
+          'circle-stroke-color': '#ffffff',
         }}
       />
       <Layer
