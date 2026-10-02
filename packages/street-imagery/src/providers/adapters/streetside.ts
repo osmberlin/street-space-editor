@@ -1,9 +1,10 @@
+import { peekStreetImageryConfig } from '../../config'
 import type { Bbox, NormalizedPhoto, ProviderAdapter, TileCoord } from '../model'
 import { collectSettledTiles, fetchTileCached, getTileCacheKey } from '../tileCache'
 import { tileBbox, tilesForBbox } from '../tileMath'
 
-// Bing Maps key as used by iD editor
-const BING_MAPS_KEY = 'Auk3J0jR9g1_PVQgdmL95zCOKVOc8g-FGq5Zgb5ik7w1Ri5SRyWILV-kksgbw-Gh'
+/** The key from `setStreetImageryConfig({ bingMapsKey })`; without it there is no overlay. */
+export const getBingMapsKey = (): string | undefined => peekStreetImageryConfig()?.bingMapsKey
 
 const STREETSIDE_API = 'https://dev.virtualearth.net/REST/v1/Imagery/MetaData/Streetside'
 const TILE_ZOOM = 16
@@ -79,11 +80,15 @@ const fetchStreetsideTilePhotos = async (
   tile: TileCoord,
   signal: AbortSignal,
 ): Promise<NormalizedPhoto[]> => {
+  const key = getBingMapsKey()
+  if (!key) {
+    return []
+  }
   const [west, south, east, north] = tileBbox(tile)
   const mapArea = `${south},${west},${north},${east}`
   const url = new URL(STREETSIDE_API)
   url.searchParams.set('mapArea', mapArea)
-  url.searchParams.set('key', BING_MAPS_KEY)
+  url.searchParams.set('key', key)
   url.searchParams.set('count', String(MAX_RESULTS))
   url.searchParams.set('uriScheme', 'https')
 

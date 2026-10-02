@@ -7,6 +7,11 @@ export type StreetImageryConfig = {
    */
   googleMapsApiKey?: string
   /**
+   * Bing Maps key for the Streetside overlay. Without it Streetside is an opener only. Microsoft
+   * issues no new keys; existing enterprise keys work until June 30, 2028.
+   */
+  bingMapsKey?: string
+  /**
    * infra3D projects for the "open in infra3D" links. Without one there is no infra3D opener.
    */
   infra3d?: Infra3dConfig
@@ -31,10 +36,12 @@ export const createStreetImageryConfig = (input: {
   mapillaryToken: string
   panoramaxApiBase?: string
   googleMapsApiKey?: string
+  bingMapsKey?: string
   infra3d?: Infra3dConfig
 }): StreetImageryConfig => ({
   mapillaryToken: input.mapillaryToken,
   googleMapsApiKey: input.googleMapsApiKey || undefined,
+  bingMapsKey: input.bingMapsKey || undefined,
   infra3d: input.infra3d && input.infra3d.projects.length > 0 ? input.infra3d : undefined,
   panoramaxApiBase: (input.panoramaxApiBase ?? DEFAULT_PANORAMAX_API_BASE).replace(/\/$/, ''),
 })

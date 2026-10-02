@@ -184,12 +184,21 @@ const PhotoProviderLayer = ({
     ['linear'],
     ['zoom'],
     10,
-    ['case', inActiveSequence, 2, 1.5],
+    ['case', inActiveSequence, 2, 1.2],
     14,
-    ['case', inActiveSequence, 4, 2.5],
+    ['case', inActiveSequence, 4, 2],
+    // Up to here there are no view shapes and the dots are 20 % smaller.
+    VIEWFIELD_MIN_ZOOM - 0.01,
+    ['case', inActiveSequence, 5.5, 2.9],
+    VIEWFIELD_MIN_ZOOM,
+    ['case', inActiveSequence, 5.5, 3.6],
     18,
     ['case', inActiveSequence, 6, 4],
   ]
+  // Zoomed out there are no view shapes; dots and lines carry the style colour then.
+  const lineAndDotColor: DataDrivenPropertyValueSpecification<string> = viewfieldsActive
+    ? ['case', inActiveSequence, BASE_COLOR, AGE_SHADE]
+    : photoCircleColor
   const viewShapeOpacity = (full: number): ExpressionSpecification => [
     'case',
     inActiveSequence,
@@ -291,7 +300,7 @@ const PhotoProviderLayer = ({
               'line-sort-key': ['case', inActiveSequence, 1, 0],
             }}
             paint={{
-              'line-color': ['case', inActiveSequence, BASE_COLOR, AGE_SHADE],
+              'line-color': lineAndDotColor,
               'line-width': ['case', inActiveSequence, ACTIVE_LINE_WIDTH, 1.25],
               'line-opacity': lineOpacity,
             }}
@@ -348,10 +357,7 @@ const PhotoProviderLayer = ({
         layout={{ 'circle-sort-key': PHOTO_SORT_KEY }}
         paint={{
           'circle-radius': dotRadius,
-          // Zoomed out there are no view shapes; the dots carry the style colour then.
-          'circle-color': viewfieldsActive
-            ? ['case', inActiveSequence, BASE_COLOR, AGE_SHADE]
-            : photoCircleColor,
+          'circle-color': lineAndDotColor,
         }}
       />
     </>

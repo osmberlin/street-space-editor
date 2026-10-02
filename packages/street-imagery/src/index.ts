@@ -52,6 +52,7 @@ export * from './viewer/groupClickedPhotos'
 export * from './viewer/photoThumbnails'
 export { buildStreetsidePreviewUrl } from './viewer/streetsidePreview'
 export { lookAroundDeepLink } from './providers/adapters/lookaround'
+export { getBingMapsKey } from './providers/adapters/streetside'
 export {
   fetchStreetViewMetadata,
   getGoogleMapsApiKey,
