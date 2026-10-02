@@ -381,11 +381,19 @@ export const StreetLevelImagerySourcesAndLayers = ({
     zoom,
   )
 
-  const selectedSequence = resolveSelectedSequence(
-    selectedPhoto,
-    sequences,
-    selectedSequenceId ?? selectedPhoto?.sequenceId,
+  const activeSequenceId = selectedSequenceId ?? selectedPhoto?.sequenceId
+  const selectedSequence = resolveSelectedSequence(selectedPhoto, sequences, activeSequenceId)
+  // Same query as the provider's photo layer, so this costs no extra request.
+  const { data: selectedProviderPhotos = [] } = useProviderPhotos(
+    selectedProviderId ?? 'mapillary',
+    showSelectionHighlight && selectedProviderId ? bbox : null,
+    zoom,
   )
+  const sequencePhotoLngLats = activeSequenceId
+    ? selectedProviderPhotos
+        .filter((photo) => photo.sequenceId === activeSequenceId)
+        .map((photo) => photo.lngLat)
+    : []
 
   // The shown photo's sequence goes below the lowest photo layer, so dots stay on top of it.
   const firstPhotoProvider = providers.find(
@@ -405,11 +413,7 @@ export const StreetLevelImagerySourcesAndLayers = ({
             bbox={bbox}
             filter={filter}
             mapFeatureCircleColor={mapFeatureCircleColor}
-            activeSequenceId={
-              providerId === selectedProviderId
-                ? (selectedSequenceId ?? selectedPhoto?.sequenceId)
-                : null
-            }
+            activeSequenceId={providerId === selectedProviderId ? activeSequenceId : null}
             photoCircleColor={photoCircleColor}
             providerId={providerId}
             showSequences={showSequences}
@@ -432,6 +436,7 @@ export const StreetLevelImagerySourcesAndLayers = ({
           cameraLngLat={viewerPov?.lngLat}
           selectedPhoto={selectedPhoto}
           selectedSequence={selectedSequence}
+          sequencePhotoLngLats={sequencePhotoLngLats}
           sequenceBeforeId={sequenceBeforeId}
         />
       ) : null}

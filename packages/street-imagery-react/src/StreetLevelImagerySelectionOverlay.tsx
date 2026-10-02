@@ -19,50 +19,60 @@ const SAME_POSITION_METERS = 0.75
 
 /**
  * Sequence lines come simplified from the vector tiles, so they pass near the photo, not through
- * it. Within this distance the nearest corner of the line is moved onto the photo marker.
+ * it. Within this distance the nearest corner of the line is moved onto a photo of the line.
  */
 const SNAP_LINE_METERS = 6
 
-/** Move the corner of the lines that is nearest to `point` onto it (when within reach). */
-const snapNearestCorner = (
+/**
+ * Move, for each point, the nearest corner of the lines onto it (when within reach). Each corner
+ * moves once; earlier points win.
+ */
+const snapCornersToPoints = (
   collection: FeatureCollection<LineString | MultiLineString>,
-  point: [number, number],
+  points: readonly [number, number][],
 ): FeatureCollection<LineString | MultiLineString> => {
-  let best: { coordinates: number[]; distance: number } | null = null
-  for (const feature of collection.features) {
-    const lines =
+  if (points.length === 0 || collection.features.length === 0) {
+    return collection
+  }
+  const features = collection.features.map((feature) => ({
+    ...feature,
+    geometry:
       feature.geometry.type === 'LineString'
-        ? [feature.geometry.coordinates]
-        : feature.geometry.coordinates
-    for (const coordinates of lines.flat()) {
-      const [lng, lat] = coordinates
-      if (lng == null || lat == null) {
+        ? { ...feature.geometry, coordinates: feature.geometry.coordinates.map((c) => [...c]) }
+        : {
+            ...feature.geometry,
+            coordinates: feature.geometry.coordinates.map((line) => line.map((c) => [...c])),
+          },
+  }))
+  const corners = features.flatMap((feature) =>
+    feature.geometry.type === 'LineString'
+      ? feature.geometry.coordinates
+      : feature.geometry.coordinates.flat(),
+  )
+  const moved = new Set<number[]>()
+  for (const point of points) {
+    let best: { corner: number[]; distance: number } | null = null
+    for (const corner of corners) {
+      const [lng, lat] = corner
+      if (lng == null || lat == null || moved.has(corner)) {
+        continue
+      }
+      // Cheap reject before the exact distance (0.0001° is about 7 to 11 m).
+      if (Math.abs(lng - point[0]) > 0.0001 || Math.abs(lat - point[1]) > 0.0001) {
         continue
       }
       const distance = distanceMeters([lng, lat], point)
       if (distance <= SNAP_LINE_METERS && (!best || distance < best.distance)) {
-        best = { coordinates, distance }
+        best = { corner, distance }
       }
     }
+    if (best) {
+      best.corner[0] = point[0]
+      best.corner[1] = point[1]
+      moved.add(best.corner)
+    }
   }
-  if (!best) {
-    return collection
-  }
-  const corner = best.coordinates
-  const move = (coordinates: number[]) => (coordinates === corner ? point : coordinates)
-  return {
-    ...collection,
-    features: collection.features.map((feature) => ({
-      ...feature,
-      geometry:
-        feature.geometry.type === 'LineString'
-          ? { ...feature.geometry, coordinates: feature.geometry.coordinates.map(move) }
-          : {
-              ...feature.geometry,
-              coordinates: feature.geometry.coordinates.map((line) => line.map(move)),
-            },
-    })),
-  }
+  return { ...collection, features }
 }
 
 export type StreetLevelImagerySelectionOverlayProps = {
@@ -73,6 +83,11 @@ export type StreetLevelImagerySelectionOverlayProps = {
    * starts at). When it differs from the photo dot, a pin marks it and a line connects both.
    */
   cameraLngLat?: [number, number] | null
+  /**
+   * Positions of the sequence's photo dots on the map. The line's corners move onto them, so the
+   * line runs through its dots.
+   */
+  sequencePhotoLngLats?: readonly [number, number][]
   /** Layer to draw the sequence line below, so photo dots stay on top of it. */
   sequenceBeforeId?: string
 }
@@ -86,6 +101,7 @@ export const StreetLevelImagerySelectionOverlay = ({
   selectedPhoto,
   selectedSequence,
   cameraLngLat,
+  sequencePhotoLngLats,
   sequenceBeforeId,
 }: StreetLevelImagerySelectionOverlayProps) => {
   const photoLngLat = selectedPhoto?.lngLat
@@ -100,7 +116,10 @@ export const StreetLevelImagerySelectionOverlay = ({
   const sequenceLines: FeatureCollection<LineString | MultiLineString> = selectedSequence
     ? sequencesToFeatureCollection([selectedSequence])
     : emptyLineCollection()
-  const sequenceCollection = dot ? snapNearestCorner(sequenceLines, dot) : sequenceLines
+  const sequenceCollection = snapCornersToPoints(sequenceLines, [
+    ...(dot ? [dot] : []),
+    ...(sequencePhotoLngLats ?? []),
+  ])
 
   if (!selectedPhoto && sequenceCollection.features.length === 0) {
     return null
