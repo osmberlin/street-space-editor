@@ -1,5 +1,5 @@
 import {
-  locationOpenerById,
+  findLocationOpener,
   openLocationInNewTab,
   type LocationOpener,
   type OpenTarget,
@@ -31,7 +31,10 @@ export const LocationPickOnMap = ({ onPick }: LocationPickOnMapProps) => {
       if (!map || !armedOpenerId) {
         return
       }
-      const opener = locationOpenerById[armedOpenerId]
+      const opener = findLocationOpener(armedOpenerId)
+      if (!opener) {
+        return
+      }
 
       const onClick = (event: MapMouseEvent) => {
         const target: OpenTarget = {

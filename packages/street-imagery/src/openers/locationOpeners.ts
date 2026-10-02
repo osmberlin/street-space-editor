@@ -12,7 +12,7 @@ import { providerById } from '../providers/registry'
 import { providerLocationLink } from '../viewer/externalLinks'
 import { angleDiffDeg, bearingDeg, type LngLat } from '../viewpoints/geometry'
 import { fetchMapillaryImagesNearPoint } from '../viewpoints/mapillaryRadiusSearch'
-import { buildInfra3dUrl, getInfra3dProjectUid } from './infra3d'
+import { buildInfra3dUrl, getInfra3dProjects } from './infra3d'
 
 /**
  * "Open this place in another imagery service": one opener per service, with a link that works
@@ -35,9 +35,8 @@ const PROVIDER_OPENER_IDS = [
   'lookaround',
 ] as const satisfies readonly ProviderId[]
 
-export const LOCATION_OPENER_IDS = [...PROVIDER_OPENER_IDS, 'infra3d'] as const
-
-export type LocationOpenerId = (typeof LOCATION_OPENER_IDS)[number]
+/** Provider ids, plus one id per configured infra3D project (`infra3d:<project uid>`). */
+export type LocationOpenerId = (typeof PROVIDER_OPENER_IDS)[number] | `infra3d:${string}`
 
 /** The place to look at (not where the camera stands): a clicked point, a feature's centroid … */
 export type OpenTarget = {
@@ -50,7 +49,7 @@ export type LocationOpener = {
   id: LocationOpenerId
   label: string
   color: string
-  /** `false` when the host config lacks what the service needs (infra3D: a project). */
+  /** `false` when the host config lacks what the service needs. */
   isAvailable: () => boolean
   /** The service at the place. Synchronous, so it works as an `<a href>`. */
   locationUrl: (target: OpenTarget) => string
@@ -165,14 +164,17 @@ const streetViewOpener: LocationOpener = {
  * infra3D has no public coverage data, so it is an opener only. Its `lookAt` already means "the
  * nearest image, turned to this point", so the plain link is the look-at link.
  */
-const infra3dOpener: LocationOpener = {
-  id: 'infra3d',
-  label: 'infra3D',
-  color: '#0F766E',
-  isAvailable: () => getInfra3dProjectUid() != null,
-  locationUrl: ({ lngLat: [lng, lat] }) => buildInfra3dUrl({ mode: 'lookAt', lng, lat }),
-}
+export const infra3dOpeners = (): LocationOpener[] =>
+  getInfra3dProjects().map(({ uid, name }) => ({
+    id: `infra3d:${uid}`,
+    label: `infra3D ${name}`,
+    color: '#0F766E',
+    isAvailable: () => true,
+    locationUrl: ({ lngLat: [lng, lat] }) =>
+      buildInfra3dUrl({ mode: 'lookAt', lng, lat, projectUid: uid }),
+  }))
 
+/** The photo providers' openers. `getLocationOpeners()` adds the infra3D projects. */
 export const LOCATION_OPENERS: LocationOpener[] = [
   mapillaryOpener,
   providerOpener('panoramax'),
@@ -182,12 +184,13 @@ export const LOCATION_OPENERS: LocationOpener[] = [
   providerOpener('vegbilder'),
   streetViewOpener,
   providerOpener('lookaround'),
-  infra3dOpener,
 ]
 
-export const locationOpenerById = Object.fromEntries(
-  LOCATION_OPENERS.map((opener) => [opener.id, opener]),
-) as Record<LocationOpenerId, LocationOpener>
+/** All openers: the photo providers, then one per infra3D project of the config. */
+export const getLocationOpeners = (): LocationOpener[] => [...LOCATION_OPENERS, ...infra3dOpeners()]
+
+export const findLocationOpener = (id: LocationOpenerId): LocationOpener | undefined =>
+  getLocationOpeners().find((opener) => opener.id === id)
 
 /**
  * Open the place in a new tab. Call it directly in the click handler: the tab is opened before

@@ -126,13 +126,23 @@ const { data: detections } = useMapillaryImageDetections(photo.photoId, {
 A button arms a location opener (see `@osm-editor-kit/street-imagery`), the next map click opens the clicked place in that service and disarms; Escape cancels.
 
 ```tsx
-import { LocationPickOnMap, useArmedLocationOpenerId, useLocationPickActions } from '@osm-editor-kit/street-imagery-react'
+import {
+  LocationPickOnMap,
+  useArmedLocationOpenerId,
+  useLocationPickActions,
+} from '@osm-editor-kit/street-imagery-react'
 
 const armed = useArmedLocationOpenerId() // show it: pressed button, crosshair cursor, a hint on the map
 const { toggle, disarm } = useLocationPickActions()
 
-<button aria-pressed={armed === 'infra3d'} onClick={() => toggle('infra3d')}>In infra3D öffnen</button>
-<Map cursor={armed ? 'crosshair' : undefined}>
+{
+  getLocationOpeners().map((opener) => (
+    <button key={opener.id} aria-pressed={armed === opener.id} onClick={() => toggle(opener.id)}>
+      Open in {opener.label}
+    </button>
+  ))
+}
+;<Map cursor={armed ? 'crosshair' : undefined}>
   <LocationPickOnMap />
 </Map>
 ```

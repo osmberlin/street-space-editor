@@ -1,4 +1,4 @@
-import { peekStreetImageryConfig } from '../config'
+import { peekStreetImageryConfig, type Infra3dProject } from '../config'
 
 /**
  * Deep links into infra3D Edit (tested 2026-10-01). Only people with an infra3D account get in;
@@ -28,13 +28,16 @@ export type Infra3dUrlOptions = (
   | { mode: 'lookAt'; lng: number; lat: number; height?: number }
   | { mode: 'imageKey'; imageKey: string; pointTo?: Infra3dPointTo }
 ) & {
-  /** Overrides `infra3d.projectUid` of the street imagery config. */
+  /** Default: the first project of `infra3d.projects` in the street imagery config. */
   projectUid?: string
 }
 
-/** The project from `setStreetImageryConfig({ infra3d })`; `undefined` when the host has none. */
-export const getInfra3dProjectUid = (): string | undefined =>
-  peekStreetImageryConfig()?.infra3d?.projectUid
+/** The projects from `setStreetImageryConfig({ infra3d })`; empty when the host has none. */
+export const getInfra3dProjects = (): Infra3dProject[] =>
+  peekStreetImageryConfig()?.infra3d?.projects ?? []
+
+/** The first configured project; `undefined` when the host has none. */
+export const getInfra3dProjectUid = (): string | undefined => getInfra3dProjects()[0]?.uid
 
 /** infra3D wants JSON params encoded with `encodeURIComponent` (`URLSearchParams` differs on spaces). */
 const jsonParam = (name: string, value: object) =>
@@ -47,7 +50,7 @@ export const buildInfra3dUrl = (options: Infra3dUrlOptions): string => {
   const projectUid = options.projectUid ?? getInfra3dProjectUid()
   if (!projectUid) {
     throw new Error(
-      'infra3D project is not set. Pass `projectUid` or `createStreetImageryConfig({ infra3d: { projectUid } })`.',
+      'infra3D project is not set. Pass `projectUid` or `createStreetImageryConfig({ infra3d: { projects } })`.',
     )
   }
 

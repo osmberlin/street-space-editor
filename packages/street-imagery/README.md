@@ -78,12 +78,13 @@ await fetchImageDetections(imageId, { filter: matchesAnyGroup(JUNCTION_DETECTION
 
 ## Open a place in another service
 
-`LOCATION_OPENERS` / `locationOpenerById` hold one opener per service (the photo providers plus infra3D). Each has `locationUrl(target)`, a plain link that works as an `<a href>`, and where the service allows it `lookAtUrl(target)`, which finds the nearest image and turns it to the place (Mapillary; Google Street View with `googleMapsApiKey`). `openLocationInNewTab(opener, target)` opens the tab first and then resolves the look-at link, so popup blockers let it through; call it directly in a click handler.
+`getLocationOpeners()` / `findLocationOpener(id)` give one opener per service: the photo providers (`LOCATION_OPENERS`) plus one per configured infra3D project (id `infra3d:<project uid>`). Each has `locationUrl(target)`, a plain link that works as an `<a href>`, and where the service allows it `lookAtUrl(target)`, which finds the nearest image and turns it to the place (Mapillary; Google Street View with `googleMapsApiKey`). `openLocationInNewTab(opener, target)` opens the tab first and then resolves the look-at link, so popup blockers let it through; call it directly in a click handler.
 
 ```ts
-import { locationOpenerById, openLocationInNewTab } from '@osm-editor-kit/street-imagery'
+import { findLocationOpener, openLocationInNewTab } from '@osm-editor-kit/street-imagery'
 
-openLocationInNewTab(locationOpenerById.mapillary, { lngLat: [13.38886, 52.51704], zoom: 17 })
+const opener = findLocationOpener('mapillary')
+if (opener) openLocationInNewTab(opener, { lngLat: [13.38886, 52.51704], zoom: 17 })
 ```
 
-**infra3D** has no public coverage data, so it is an opener only and needs a project: `createStreetImageryConfig({ infra3d: { projectUid } })`. `buildInfra3dUrl` builds the three link kinds (`jumpTo`, `lookAt`, `imageKey` with optional `pointTo`; they exclude each other). The opener uses `lookAt` without a height: infra3D then looks at the ground at that point from the nearest image (within 100 m). Only people with an infra3D account get past its login page.
+**infra3D** has no public coverage data, so it is an opener only and needs projects: `createStreetImageryConfig({ infra3d: { projects: [{ uid, name }] } })`. Each project gets its own opener, labelled "infra3D <name>". `buildInfra3dUrl` builds the three link kinds (`jumpTo`, `lookAt`, `imageKey` with optional `pointTo`; they exclude each other). The opener uses `lookAt` without a height: infra3D then looks at the ground at that point from the nearest image (within 100 m). Only people with an infra3D account get past its login page.

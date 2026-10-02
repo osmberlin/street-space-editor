@@ -6,8 +6,13 @@ const PROJECT = 'ec2428b7-8e49-4d93-80a0-edfec6da1cf3'
 const lng = 13.38886
 const lat = 52.51704
 
-const configure = (infra3d?: { projectUid: string }) => {
-  setStreetImageryConfig(createStreetImageryConfig({ mapillaryToken: 'test-token', infra3d }))
+const configure = (projectUid?: string) => {
+  setStreetImageryConfig(
+    createStreetImageryConfig({
+      mapillaryToken: 'test-token',
+      infra3d: projectUid ? { projects: [{ uid: projectUid, name: 'Berlin' }] } : undefined,
+    }),
+  )
 }
 
 /** The decoded JSON of one param, read the way a browser reads the URL. */
@@ -20,7 +25,7 @@ afterEach(() => {
 
 describe('buildInfra3dUrl', () => {
   it('jumps to a position with the project of the config', () => {
-    configure({ projectUid: PROJECT })
+    configure(PROJECT)
     expect(buildInfra3dUrl({ mode: 'jumpTo', lng, lat })).toBe(
       `https://app.infra3d.com/edit/?projectUID=${PROJECT}&jumpTo=%7B%22easting%22%3A13.38886%2C%22northing%22%3A52.51704%2C%22epsg%22%3A4326%7D`,
     )

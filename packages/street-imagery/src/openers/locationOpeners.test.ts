@@ -3,18 +3,22 @@ import { createStreetImageryConfig, setStreetImageryConfig } from '../config'
 import type { NormalizedPhoto } from '../providers/model'
 import { destinationPoint, type LngLat } from '../viewpoints/geometry'
 import {
-  LOCATION_OPENERS,
-  locationOpenerById,
+  findLocationOpener,
+  getLocationOpeners,
   mapillaryLookAtUrl,
   streetViewLookAtUrl,
 } from './locationOpeners'
 
 const PROJECT = 'ec2428b7-8e49-4d93-80a0-edfec6da1cf3'
+const PROJECTS = [
+  { uid: PROJECT, name: 'Berlin' },
+  { uid: 'second-project', name: 'Hamburg 2024' },
+]
 const target: LngLat = [13.38886, 52.51704]
 
 beforeAll(() => {
   setStreetImageryConfig(
-    createStreetImageryConfig({ mapillaryToken: 'test-token', infra3d: { projectUid: PROJECT } }),
+    createStreetImageryConfig({ mapillaryToken: 'test-token', infra3d: { projects: PROJECTS } }),
   )
 })
 
@@ -28,16 +32,28 @@ const photo = (partial: Partial<NormalizedPhoto> & { photoId: string }): Normali
   ...partial,
 })
 
-describe('LOCATION_OPENERS', () => {
+describe('getLocationOpeners', () => {
   it('builds a link for every opener', () => {
-    for (const opener of LOCATION_OPENERS) {
+    for (const opener of getLocationOpeners()) {
       expect(opener.isAvailable()).toBe(true)
       expect(opener.locationUrl({ lngLat: target, zoom: 17 })).toMatch(/^https:\/\//)
     }
   })
 
+  it('has one infra3D opener per project, named after it', () => {
+    const openers = getLocationOpeners().filter((opener) => opener.id.startsWith('infra3d:'))
+    expect(openers.map((opener) => opener.label)).toEqual([
+      'infra3D Berlin',
+      'infra3D Hamburg 2024',
+    ])
+    const url = new URL(openers[1]?.locationUrl({ lngLat: target }) ?? '')
+    expect(url.searchParams.get('projectUID')).toBe('second-project')
+  })
+
   it('opens infra3D looking at the place', () => {
-    const url = new URL(locationOpenerById.infra3d.locationUrl({ lngLat: target }))
+    const url = new URL(
+      findLocationOpener(`infra3d:${PROJECT}`)?.locationUrl({ lngLat: target }) ?? '',
+    )
     expect(JSON.parse(url.searchParams.get('lookAt') ?? '')).toEqual({
       easting: target[0],
       northing: target[1],
@@ -45,11 +61,11 @@ describe('LOCATION_OPENERS', () => {
     })
   })
 
-  it('makes infra3D unavailable without a project', () => {
+  it('has no infra3D opener without a project', () => {
     setStreetImageryConfig(createStreetImageryConfig({ mapillaryToken: 'test-token' }))
-    expect(locationOpenerById.infra3d.isAvailable()).toBe(false)
+    expect(findLocationOpener(`infra3d:${PROJECT}`)).toBeUndefined()
     setStreetImageryConfig(
-      createStreetImageryConfig({ mapillaryToken: 'test-token', infra3d: { projectUid: PROJECT } }),
+      createStreetImageryConfig({ mapillaryToken: 'test-token', infra3d: { projects: PROJECTS } }),
     )
   })
 })

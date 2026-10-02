@@ -7,13 +7,20 @@ export type StreetImageryConfig = {
    */
   googleMapsApiKey?: string
   /**
-   * infra3D project for the "open in infra3D" links. Without it the infra3D opener is unavailable.
+   * infra3D projects for the "open in infra3D" links. Without one there is no infra3D opener.
    */
   infra3d?: Infra3dConfig
 }
 
+/** One infra3D project the host links to: the id of the URL (`projectUID`) and a name to show. */
+export type Infra3dProject = {
+  uid: string
+  name: string
+}
+
 export type Infra3dConfig = {
-  projectUid: string
+  /** One "open in infra3D" opener per project, in this order. */
+  projects: Infra3dProject[]
 }
 
 const DEFAULT_PANORAMAX_API_BASE = 'https://api.panoramax.xyz'
@@ -28,7 +35,7 @@ export const createStreetImageryConfig = (input: {
 }): StreetImageryConfig => ({
   mapillaryToken: input.mapillaryToken,
   googleMapsApiKey: input.googleMapsApiKey || undefined,
-  infra3d: input.infra3d?.projectUid ? input.infra3d : undefined,
+  infra3d: input.infra3d && input.infra3d.projects.length > 0 ? input.infra3d : undefined,
   panoramaxApiBase: (input.panoramaxApiBase ?? DEFAULT_PANORAMAX_API_BASE).replace(/\/$/, ''),
 })
 
