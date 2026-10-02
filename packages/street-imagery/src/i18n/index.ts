@@ -27,6 +27,26 @@ export const formatRelativeDate = (
 ): string =>
   formatDistanceStrict(timestamp, now, { addSuffix: true, locale: dateFnsLocale(locale) })
 
+/**
+ * Date and time as the camera's clock showed it, with the UTC offset: "Mar 8, 2025, 3:40 PM
+ * (+01:00)". Takes an ISO time with offset (`2025-03-08T15:40:35+01:00`); `null` when it has none.
+ */
+export const formatLocalDateTime = (
+  isoWithOffset: string,
+  locale: StreetImageryLocale,
+): string | null => {
+  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?)(?:\.\d+)?(Z|[+-]\d{2}:?\d{2})$/.exec(
+    isoWithOffset,
+  )
+  const wallClock = match?.[1]
+  if (!wallClock) {
+    return null
+  }
+  // Without the offset the time parses as local, so it formats as the camera's wall clock.
+  const offset = match[2] === 'Z' ? '+00:00' : match[2]
+  return `${format(new Date(wallClock), 'PPp', { locale: dateFnsLocale(locale) })} (${offset})`
+}
+
 /** Two lines for a tooltip: the full date, and how long ago that is. */
 export const formatDateTooltip = (
   timestamp: number | Date,

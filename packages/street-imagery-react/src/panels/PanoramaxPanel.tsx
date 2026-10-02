@@ -1,7 +1,7 @@
 import '@panoramax/web-viewer'
 import { getStreetImageryConfig } from '@osm-editor-kit/street-imagery'
 import type { NormalizedPhoto } from '@osm-editor-kit/street-imagery'
-import { useEffect, useRef } from 'react'
+import { useEffect, useEffectEvent, useRef } from 'react'
 import type { StreetImageryPhotoSelection } from '../types'
 import { useViewerActions } from '../useViewerStore'
 import type {
@@ -11,8 +11,13 @@ import type {
   PnxViewRotatedEventDetail,
 } from './panoramax-photo-viewer.d'
 import { limitPanningToImage } from './panoramaxLimitPanning'
+import { panoramaxPhotoFromMetadata } from './panoramaxPhotoFromMetadata'
 
 const panoramaxApiEndpoint = () => `${getStreetImageryConfig().panoramaxApiBase}/api`
+
+/** The legend sits in the page, outside the viewer's box, so it needs page-level CSS. */
+const HIDE_LEGEND_CSS =
+  'pnx-photo-viewer pnx-bottom-drawer, pnx-photo-viewer pnx-picture-legend { display: none !important; }'
 
 const normalizeBearing = (degrees: number) => ((degrees % 360) + 360) % 360
 
@@ -21,6 +26,13 @@ type PanoramaxPanelProps = {
   groupPhotos: NormalizedPhoto[]
   onPhotoSelected: (selection: StreetImageryPhotoSelection) => void
   onEaseMapToPoint: (lng: number, lat: number) => void
+  /** The shown picture with creator, licence, local capture time and camera. */
+  onViewerPhoto?: (photo: NormalizedPhoto) => void
+  /**
+   * Hide the viewer's own legend (a bottom drawer in narrow containers). The host must then show
+   * creator and licence itself, from `onViewerPhoto`.
+   */
+  hideLegend?: boolean
 }
 
 type PendingSelect = {
@@ -32,6 +44,8 @@ export const PanoramaxPanel = ({
   photo,
   onPhotoSelected,
   onEaseMapToPoint,
+  onViewerPhoto,
+  hideLegend = false,
 }: PanoramaxPanelProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<PnxPhotoViewerElement>(null)
@@ -43,6 +57,9 @@ export const PanoramaxPanel = ({
   const pendingBearingRef = useRef<number | null>(null)
   const pendingHfovRef = useRef<number | null>(null)
   const actions = useViewerActions()
+  const emitViewerPhoto = useEffectEvent((viewerPhoto: NormalizedPhoto) =>
+    onViewerPhoto?.(viewerPhoto),
+  )
 
   useEffect(
     function syncPhotoRef() {
@@ -106,6 +123,10 @@ export const PanoramaxPanel = ({
 
       const onPictureLoaded = (event: Event) => {
         const detail = (event as CustomEvent<PnxPictureLoadedEventDetail>).detail
+        const metadata = viewer.psv?.getPictureMetadata()
+        if (metadata) {
+          emitViewerPhoto(panoramaxPhotoFromMetadata(metadata))
+        }
         if (detail.lon == null || detail.lat == null) {
           return
         }
@@ -213,6 +234,7 @@ export const PanoramaxPanel = ({
       className="min-h-48 overflow-hidden rounded-lg border border-slate-200 bg-slate-900"
       style={{ aspectRatio: '4 / 3' }}
     >
+      {hideLegend ? <style>{HIDE_LEGEND_CSS}</style> : null}
       <pnx-photo-viewer
         ref={viewerRef}
         className="block h-full w-full"

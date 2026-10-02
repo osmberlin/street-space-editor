@@ -21,7 +21,7 @@ type StreetLevelImageryViewerProps = {
   groupPhotos: NormalizedPhoto[]
   onPhotoSelected: (selection: StreetImageryPhotoSelection) => void
   onEaseMapToPoint: (lng: number, lat: number) => void
-  /** Mapillary only: full photo data for each image the viewer shows. */
+  /** Mapillary, Panoramax: full photo data (creator, licence …) for each image the viewer shows. */
   onViewerPhoto?: (photo: NormalizedPhoto) => void
   /** Mapillary 360° photos: initial view bearing (e.g. a suggested view direction). */
   lookAtBearing?: number | null
@@ -29,7 +29,10 @@ type StreetLevelImageryViewerProps = {
   lookAt?: MapillaryLookAt | null
   /** Mapillary: outlines to draw in the shown image. */
   outlines?: MapillaryViewerOutline[]
-  /** Mapillary: hide the viewer's own attribution; the host must then show it (see panel). */
+  /**
+   * Hide the viewer's own attribution (Mapillary) or legend (Panoramax); the host must then show
+   * creator and licence itself, from `onViewerPhoto`.
+   */
   hideAttribution?: boolean
 }
 
@@ -76,6 +79,8 @@ export const StreetLevelImageryViewer = ({
       <Suspense fallback={<ViewerPanelPlaceholder />}>
         <PanoramaxPanel
           groupPhotos={groupPhotos}
+          hideLegend={hideAttribution}
+          onViewerPhoto={onViewerPhoto}
           onEaseMapToPoint={onEaseMapToPoint}
           onPhotoSelected={onPhotoSelected}
           photo={photo}

@@ -21,6 +21,27 @@ type PnxPictureLoadedEventDetail = {
   first?: boolean
 }
 
+/** The parts of the viewer's picture metadata we read (a STAC item, reshaped by the viewer). */
+type PnxPictureMetadata = {
+  id: string
+  gps: [number, number]
+  horizontalFov?: number
+  sequence?: { id?: string | null }
+  caption?: { producer?: string[] }
+  origInstance?: { instance_name?: string }
+  origLinks?: { rel?: string; href?: string }[]
+  panorama?: { cropData?: { croppedWidth?: number; fullWidth?: number } }
+  properties?: {
+    datetime?: string
+    datetimetz?: string
+    created?: string
+    license?: string
+    'view:azimuth'?: number
+    'quality:horizontal_accuracy'?: number
+    'pers:interior_orientation'?: { camera_manufacturer?: string; camera_model?: string }
+  }
+}
+
 interface PnxPhotoViewerElement extends HTMLElement {
   endpoint: string
   picture: string | null
@@ -29,7 +50,7 @@ interface PnxPhotoViewerElement extends HTMLElement {
   widgets: string
   psv:
     | ({
-        getPictureMetadata(): { gps: [number, number]; id: string } | null | undefined
+        getPictureMetadata(): PnxPictureMetadata | null | undefined
         resize(): void
         dataHelper: { zoomLevelToFov(level: number): number }
       } & import('./panoramaxLimitPanning').PsvForPanLimit)
@@ -56,6 +77,7 @@ declare module 'react' {
 
 export type {
   PnxPhotoViewerElement,
+  PnxPictureMetadata,
   PnxSelectEventDetail,
   PnxViewRotatedEventDetail,
   PnxPictureLoadedEventDetail,

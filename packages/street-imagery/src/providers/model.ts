@@ -45,6 +45,8 @@ export type NormalizedPhoto = {
   creatorId?: string
   /** Username of the creator, where the source gives it (needed for attribution). */
   creatorName?: string
+  /** More about the photo, where the provider's viewer or API gives it. */
+  details?: PhotoDetails
   /** Mapillary `organization_id`; only on some images. */
   organizationId?: string
   /** Direct thumbnail URL when the list API already provides one. */
@@ -67,6 +69,27 @@ export type NormalizedMapFeature = {
   firstSeenAt: number | null
   lastSeenAt: number | null
   lngLat: [number, number]
+}
+
+/** Facts about one photo beyond what the map needs; every field is optional. */
+export type PhotoDetails = {
+  /** How to reach the creator, e.g. an email address. */
+  creatorContact?: string
+  /** Licence id or short name, e.g. `etalab-2.0`, and a page that explains it. */
+  license?: string
+  licenseUrl?: string
+  /** Capture time as the camera's wall clock with its UTC offset: `2025-03-08T15:40:35+01:00`. */
+  capturedAtLocal?: string
+  /** When the photo was uploaded (ms). */
+  uploadedAt?: number
+  /** Camera maker and model, e.g. "samsung SM-G950F". */
+  camera?: string
+  /** Horizontal field of view of a flat photo, in degrees. */
+  fieldOfViewDeg?: number
+  /** Accuracy of the position, in meters. */
+  positionAccuracyMeters?: number
+  /** Server the photo is stored on, for federated providers (Panoramax). */
+  instance?: string
 }
 
 export type NormalizedSequence = {

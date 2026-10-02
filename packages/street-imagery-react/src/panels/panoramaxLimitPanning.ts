@@ -29,13 +29,24 @@ type ViewPosition = { yaw: number; pitch: number }
 
 const toRad = (degrees: number) => (degrees * Math.PI) / 180
 
-/** Clamp to `[min, max]`; a range narrower than the view (min > max) gives its centre. */
-const clampOrCentre = (value: number, min: number, max: number) =>
-  min > max ? (min + max) / 2 : Math.max(min, Math.min(max, value))
+/** At least this share of the image (or of the view, when that is smaller) stays in view. */
+const MIN_VISIBLE_SHARE = 0.3
+
+/** How far out the view may zoom: the image then fills this share of the view. */
+const MIN_IMAGE_SHARE_OF_VIEW = 0.8
 
 /**
- * The view position moved back so the view stays inside the image. Flat photos are shown as a
- * small patch of a sphere; outside the patch there is only black. 360° photos have no limit.
+ * Keep the view centre where at least `MIN_VISIBLE_SHARE` of the image is still in view: the
+ * edges and some black beyond them can be seen, but the image cannot be pushed out of sight.
+ */
+const keepInView = (centre: number, imageMin: number, imageMax: number, halfView: number) => {
+  const keep = MIN_VISIBLE_SHARE * Math.min(imageMax - imageMin, 2 * halfView)
+  return Math.max(imageMin - halfView + keep, Math.min(imageMax + halfView - keep, centre))
+}
+
+/**
+ * The view position moved back so the image stays in view. Flat photos are shown as a small
+ * patch of a sphere; outside the patch there is only black. 360° photos have no limit.
  */
 export const limitToImage = (psv: PsvForPanLimit, position: ViewPosition): ViewPosition => {
   const crop = psv.state.textureData?.panoData?.baseData
@@ -51,12 +62,12 @@ export const limitToImage = (psv: PsvForPanLimit, position: ViewPosition): ViewP
     const right = ((crop.croppedX + crop.croppedWidth) / crop.fullWidth) * 2 * Math.PI - Math.PI
     // The viewer counts yaw from 0 to 2π; the image sits around 0.
     const centred = yaw > Math.PI ? yaw - 2 * Math.PI : yaw
-    yaw = clampOrCentre(centred, left + halfH, right - halfH)
+    yaw = keepInView(centred, left, right, halfH)
   }
   if (crop.croppedHeight < crop.fullHeight) {
     const top = Math.PI / 2 - (crop.croppedY / crop.fullHeight) * Math.PI
     const bottom = Math.PI / 2 - ((crop.croppedY + crop.croppedHeight) / crop.fullHeight) * Math.PI
-    pitch = clampOrCentre(pitch, bottom + halfV, top - halfV)
+    pitch = keepInView(pitch, bottom, top, halfV)
   }
   return { yaw, pitch }
 }
@@ -64,8 +75,8 @@ export const limitToImage = (psv: PsvForPanLimit, position: ViewPosition): ViewP
 const toDeg = (radians: number) => (radians * 180) / Math.PI
 
 /**
- * The zoom level at which the view is exactly as large as the image (in the tighter direction),
- * or `null` when there is no limit. Zooming out further shows black around a flat photo.
+ * The widest zoom level for a flat photo: the image with a small margin around it (in the
+ * tighter direction). `null` when there is no limit.
  */
 export const widestZoomLevel = (psv: PsvForPanLimit): number | null => {
   const crop = psv.state.textureData?.panoData?.baseData
@@ -83,7 +94,7 @@ export const widestZoomLevel = (psv: PsvForPanLimit): number | null => {
   const aspect = Math.tan(toRad(psv.state.hFov) / 2) / Math.tan(toRad(psv.state.vFov) / 2)
   const vForImageWidth = toDeg(2 * Math.atan(Math.tan(toRad(Math.min(imageH, 179)) / 2) / aspect))
   const widestV = Math.min(flatHigh ? imageV : 180, flatWide ? vForImageWidth : 180)
-  return psv.dataHelper.fovToZoomLevel(widestV)
+  return psv.dataHelper.fovToZoomLevel(Math.min(widestV / MIN_IMAGE_SHARE_OF_VIEW, 179))
 }
 
 /**

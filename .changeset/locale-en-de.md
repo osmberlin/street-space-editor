@@ -20,3 +20,5 @@
 - Breaking: `viewSuggestionLabel(suggestion, messages)` takes the messages; `viewpointRoleLabel` is gone (use `messages.viewpointRole`).
 - **Map look**: sequence lines and photo dots are black, without white outlines; the shown photo's sequence is thicker and the rest steps back. View-direction shapes and the shown photo's cone carry the style colour (`photoCircleColor`) with a hairline edge at most. New options `viewConeColor` and `viewConeScale`.
 - Sequence lines run through their loaded photos (`alignLineToPoints` in the core package adds the missing corners).
+- **Panoramax panel**: `onViewerPhoto` gives creator, licence, local capture time, camera and position accuracy (`NormalizedPhoto.details`); `hideLegend` hides the viewer's own legend drawer. Flat photos can no longer be panned or zoomed out of sight: at least 30 % of the image stays in view.
+- `PhotoDate` takes `localDateTime` for a tooltip with the camera's local date and time.
