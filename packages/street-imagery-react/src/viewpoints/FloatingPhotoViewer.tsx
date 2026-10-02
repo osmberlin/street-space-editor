@@ -49,6 +49,8 @@ const Icon = ({ path, className = 'size-4' }: { path: string; className?: string
 
 const ICONS = {
   back: 'M15 18l-6-6 6-6',
+  undo: 'M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11',
+  redo: 'm15 14 5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H13',
   forward: 'M9 18l6-6-6-6',
   close: 'M18 6 6 18M6 6l12 12',
   minimize: 'M5 12h14',
@@ -138,6 +140,21 @@ export type FloatingPhotoViewerProps = {
   onBack: () => void
   onForward: () => void
   onClose: () => void
+  /**
+   * Step to the neighbouring photo, e.g. along the clicked street: the `<` `>` buttons at the
+   * left of the header. A missing handler disables its button.
+   */
+  step?: {
+    onPrevious?: () => void
+    onNext?: () => void
+    previousLabel: string
+    nextLabel: string
+  }
+  /**
+   * Bar below the header, in place of the suggested-view chips; e.g. the map feature the photos
+   * belong to, with a button per capture day.
+   */
+  toolbar?: ReactNode
   /** Short status line, e.g. "Loading…" or "No photos from the last 2 years". */
   status?: ReactNode
   /** Viewer body (provider panel). */
@@ -151,7 +168,8 @@ export type FloatingPhotoViewerProps = {
 
 /**
  * Photo viewer box floating over the map. Render inside a positioned (relative) map container.
- * Drag the header to move, drag the left edge to resize. Keys: Esc closes, [ and ] step history.
+ * Drag the header to move, drag the left edge to resize. Keys: Esc closes, [ and ] step history,
+ * Alt + arrow left/right step along (`step`).
  */
 export const FloatingPhotoViewer = ({
   title,
@@ -163,6 +181,8 @@ export const FloatingPhotoViewer = ({
   onBack,
   onForward,
   onClose,
+  step,
+  toolbar,
   status,
   children,
   footer,
@@ -194,6 +214,10 @@ export const FloatingPhotoViewer = ({
       onBack()
     } else if (event.key === ']' && canGoForward) {
       onForward()
+    } else if (event.key === 'ArrowLeft' && event.altKey) {
+      step?.onPrevious?.()
+    } else if (event.key === 'ArrowRight' && event.altKey) {
+      step?.onNext?.()
     }
   })
 
@@ -272,19 +296,33 @@ export const FloatingPhotoViewer = ({
         onPointerDown={(event) => startDrag(event, 'move')}
         {...dragHandlers}
       >
-        <ToolbarButton disabled={!canGoBack} label="Previous photo in history ([)" onClick={onBack}>
-          <Icon path={ICONS.back} />
-        </ToolbarButton>
-        <ToolbarButton
-          disabled={!canGoForward}
-          label="Next photo in history (])"
-          onClick={onForward}
-        >
-          <Icon path={ICONS.forward} />
-        </ToolbarButton>
+        {step ? (
+          <>
+            <ToolbarButton
+              disabled={!step.onPrevious}
+              label={step.previousLabel}
+              onClick={() => step.onPrevious?.()}
+            >
+              <Icon path={ICONS.back} />
+            </ToolbarButton>
+            <ToolbarButton
+              disabled={!step.onNext}
+              label={step.nextLabel}
+              onClick={() => step.onNext?.()}
+            >
+              <Icon path={ICONS.forward} />
+            </ToolbarButton>
+          </>
+        ) : null}
         <h2 className="min-w-0 flex-1 truncate px-1 text-sm font-semibold text-slate-800">
           {title}
         </h2>
+        <ToolbarButton disabled={!canGoBack} label="Back in history ([)" onClick={onBack}>
+          <Icon path={ICONS.undo} />
+        </ToolbarButton>
+        <ToolbarButton disabled={!canGoForward} label="Forward in history (])" onClick={onForward}>
+          <Icon path={ICONS.redo} />
+        </ToolbarButton>
         <ToolbarButton
           label="Minimize"
           onClick={() => updateLayout({ ...layout, minimized: true })}
@@ -296,11 +334,15 @@ export const FloatingPhotoViewer = ({
         </ToolbarButton>
       </header>
 
-      {suggestions.length > 0 ? (
+      {toolbar ? (
+        <div className="border-b border-slate-100 px-2 py-1.5">{toolbar}</div>
+      ) : suggestions.length > 0 ? (
         <nav
           aria-label="Suggested views"
           className="flex gap-1 overflow-x-auto border-b border-slate-100 px-2 py-1.5"
+          title="Suggested views: where the photo is taken from, and which way it looks"
         >
+          <span className="shrink-0 self-center pr-0.5 text-xs text-slate-500">Views</span>
           {suggestions.map((suggestion) => (
             <SuggestionChip
               active={suggestion.direction.key === activeDirectionKey}
