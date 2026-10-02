@@ -293,7 +293,7 @@ const PhotoProviderLayer = ({
               'line-sort-key': ['case', inActiveSequence, 1, 0],
             }}
             paint={{
-              'line-color': AGE_SHADE,
+              'line-color': ['case', inActiveSequence, BASE_COLOR, AGE_SHADE],
               'line-width': ['case', inActiveSequence, ACTIVE_LINE_WIDTH, 1.25],
               'line-opacity': lineOpacity,
             }}
@@ -350,7 +350,7 @@ const PhotoProviderLayer = ({
         layout={{ 'circle-sort-key': PHOTO_SORT_KEY }}
         paint={{
           'circle-radius': dotRadius,
-          'circle-color': AGE_SHADE,
+          'circle-color': ['case', inActiveSequence, BASE_COLOR, AGE_SHADE],
         }}
       />
     </>
