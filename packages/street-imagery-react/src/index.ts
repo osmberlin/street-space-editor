@@ -1,4 +1,6 @@
 export {
+  BASE_COLOR,
+  SELECTION_COLOR,
   StreetLevelImagerySelectionOverlay,
   resolveSelectedSequence,
 } from './StreetLevelImagerySelectionOverlay'
@@ -6,7 +8,7 @@ export {
   StreetLevelImagerySourcesAndLayers,
   type PhotoFilter,
 } from './StreetLevelImagerySourcesAndLayers'
-export { StreetLevelImageryViewCone } from './StreetLevelImageryViewCone'
+export { StreetLevelImageryViewCone, VIEW_SHAPE_FILL_OPACITY } from './StreetLevelImageryViewCone'
 export { StreetLevelImageryViewer } from './StreetLevelImageryViewer'
 export type { StreetImageryPhotoSelection } from './types'
 export {

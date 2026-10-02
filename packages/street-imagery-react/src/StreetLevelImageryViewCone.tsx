@@ -2,7 +2,7 @@ import { coneRadiusMeters, viewConeGeoJson } from '@osm-editor-kit/street-imager
 import type { NormalizedPhoto } from '@osm-editor-kit/street-imagery'
 import type { DataDrivenPropertyValueSpecification } from 'maplibre-gl'
 import { Layer, Source } from 'react-map-gl/maplibre'
-import { BASE_COLOR } from './StreetLevelImagerySelectionOverlay'
+import { SELECTION_COLOR } from './StreetLevelImagerySelectionOverlay'
 
 const CONE_SOURCE_ID = 'view-direction-cone'
 const CONE_FILL_LAYER_ID = 'view-direction-cone-fill'
@@ -40,7 +40,7 @@ export const StreetLevelImageryViewCone = ({
   selectedPhoto,
   zoom,
   viewerPov,
-  color = BASE_COLOR,
+  color = SELECTION_COLOR,
   scale = 2.5,
 }: StreetLevelImageryViewConeProps) => {
   const apex = viewerPov?.lngLat ?? selectedPhoto.lngLat

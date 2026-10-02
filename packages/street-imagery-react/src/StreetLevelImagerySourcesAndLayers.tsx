@@ -43,6 +43,7 @@ import {
   ACTIVE_LINE_WIDTH,
   BASE_COLOR,
   resolveSelectedSequence,
+  SELECTION_COLOR,
   StreetLevelImagerySelectionOverlay,
 } from './StreetLevelImagerySelectionOverlay'
 import { StreetLevelImageryViewCone, VIEW_SHAPE_FILL_OPACITY } from './StreetLevelImageryViewCone'
@@ -402,11 +403,11 @@ export type StreetLevelImagerySourcesAndLayersProps = {
       lngLat?: [number, number] | null
     } | null
     /**
-     * Style colour of a photo (by type, age …). It colours the view-direction shapes and the
-     * shown photo's cone; photo dots and sequence lines are black.
+     * Style colour of a photo (by type, age …). It colours the view-direction shapes; photo dots
+     * and sequence lines are black.
      */
     photoCircleColor: DataDrivenPropertyValueSpecification<string>
-    /** Colour of the shown photo's view cone. Default: `photoCircleColor`. */
+    /** Colour of the shown photo's view cone. Default: the selection colour (orange). */
     viewConeColor?: DataDrivenPropertyValueSpecification<string>
     /** Length of the shown photo's view cone, as a multiple of the per-photo shapes. Default 2.5. */
     viewConeScale?: number
@@ -493,7 +494,7 @@ export const StreetLevelImagerySourcesAndLayers = ({
 
       {showViewCone && selectedPhoto ? (
         <StreetLevelImageryViewCone
-          color={viewConeColor ?? photoCircleColor}
+          color={viewConeColor ?? SELECTION_COLOR}
           scale={viewConeScale}
           selectedPhoto={selectedPhoto}
           viewerPov={viewerPov}
