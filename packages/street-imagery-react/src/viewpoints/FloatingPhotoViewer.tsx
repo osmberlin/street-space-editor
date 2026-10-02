@@ -101,7 +101,7 @@ const SuggestionChip = ({
       aria-label={best ? label : messages.viewer.noPhoto(label)}
       aria-pressed={active}
       className={[
-        'flex min-w-0 flex-1 flex-col items-center rounded-md border px-1 py-0.5 text-xs leading-tight',
+        'flex min-w-0 flex-col items-center rounded-md border px-1 py-0.5 text-xs leading-tight',
         active
           ? 'border-fuchsia-600 bg-fuchsia-600 text-white'
           : best
@@ -372,7 +372,7 @@ export const FloatingPhotoViewer = ({
       ) : suggestions.length > 0 ? (
         <nav
           aria-label={messages.viewer.suggestedViews}
-          className="flex gap-1 border-b border-slate-100 px-2 py-1.5"
+          className="grid grid-cols-[repeat(auto-fit,minmax(5.25rem,1fr))] gap-1 border-b border-slate-100 px-2 py-1.5"
           title={messages.viewer.suggestedViewsHint}
         >
           {suggestions.map((suggestion) => (
