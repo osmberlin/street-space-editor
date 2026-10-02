@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@mapbox/vector-tile": "^3.0.0",
+    "date-fns": "^4.4.0",
     "pbf": "^5.1.0"
   },
   "devDependencies": {

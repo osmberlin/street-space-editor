@@ -1,5 +1,6 @@
 import type { NormalizedPhoto } from '@osm-editor-kit/street-imagery'
 import { lazy, Suspense } from 'react'
+import { useStreetImageryI18n } from './i18n/StreetImageryLocaleProvider'
 import type { MapillaryLookAt, MapillaryViewerOutline } from './panels/mapillaryLookAt'
 import type { StreetImageryPhotoSelection } from './types'
 
@@ -28,13 +29,18 @@ type StreetLevelImageryViewerProps = {
   lookAt?: MapillaryLookAt | null
   /** Mapillary: outlines to draw in the shown image. */
   outlines?: MapillaryViewerOutline[]
+  /** Mapillary: hide the viewer's own attribution; the host must then show it (see panel). */
+  hideAttribution?: boolean
 }
 
-const ViewerPanelPlaceholder = () => (
-  <div className="flex min-h-48 animate-pulse items-center justify-center rounded-lg border border-slate-200 bg-slate-100">
-    <span className="text-sm text-slate-500">Loading viewer…</span>
-  </div>
-)
+const ViewerPanelPlaceholder = () => {
+  const { messages } = useStreetImageryI18n()
+  return (
+    <div className="flex min-h-48 animate-pulse items-center justify-center rounded-lg border border-slate-200 bg-slate-100">
+      <span className="text-sm text-slate-500">{messages.viewer.loading}</span>
+    </div>
+  )
+}
 
 export const StreetLevelImageryViewer = ({
   photo,
@@ -45,12 +51,14 @@ export const StreetLevelImageryViewer = ({
   lookAtBearing,
   lookAt,
   outlines,
+  hideAttribution,
 }: StreetLevelImageryViewerProps) => {
   if (photo.providerId === 'mapillary') {
     return (
       <Suspense fallback={<ViewerPanelPlaceholder />}>
         <MapillaryPanel
           groupPhotos={groupPhotos}
+          hideAttribution={hideAttribution}
           onEaseMapToPoint={onEaseMapToPoint}
           onPhotoSelected={onPhotoSelected}
           lookAt={lookAt}

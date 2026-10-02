@@ -33,6 +33,12 @@ type MapillaryPanelProps = {
   lookAt?: MapillaryLookAt | null
   /** Outlines to draw in the shown image, e.g. the detections you care about. */
   outlines?: MapillaryViewerOutline[]
+  /**
+   * Hide the viewer's own attribution (creator and year). The host must then show the creator
+   * (`creatorName` of `onViewerPhoto`) and a link to the image on Mapillary itself; the images
+   * are CC BY-SA.
+   */
+  hideAttribution?: boolean
 }
 
 /** Mapillary spherical basic x for a map bearing; x = 0.5 is the image compass direction. */
@@ -47,6 +53,7 @@ export const MapillaryPanel = ({
   lookAtBearing,
   lookAt,
   outlines,
+  hideAttribution = false,
 }: MapillaryPanelProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<Viewer | null>(null)
@@ -57,6 +64,7 @@ export const MapillaryPanel = ({
   const pendingBearingRef = useRef<number | null>(null)
   const actions = useViewerActions()
   const initialPhotoIdRef = useRef(photo.photoId)
+  const initialHideAttributionRef = useRef(hideAttribution)
   // Callbacks may change identity every render; the viewer must not remount for that.
   const emitPhotoSelected = useEffectEvent(onPhotoSelected)
   const emitEaseMapToPoint = useEffectEvent(onEaseMapToPoint)
@@ -109,6 +117,7 @@ export const MapillaryPanel = ({
         container,
         imageId: initialPhotoIdRef.current,
         component: {
+          attribution: !initialHideAttributionRef.current,
           cover: false,
           sequence: { visible: true },
           tag: true,
@@ -158,6 +167,7 @@ export const MapillaryPanel = ({
           isPano: image.cameraType === 'spherical' || image.cameraType === 'equirectangular',
           heading: image.computedCompassAngle ?? image.compassAngle,
           lngLat: [position.lng, position.lat],
+          ...(image.creatorUsername ? { creatorName: image.creatorUsername } : {}),
         })
 
         actions.setPov({ lngLat: [position.lng, position.lat] })

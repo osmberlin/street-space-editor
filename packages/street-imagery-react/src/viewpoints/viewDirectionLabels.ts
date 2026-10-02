@@ -1,29 +1,9 @@
-import type { ViewSuggestion, ViewpointRole } from '@osm-editor-kit/street-imagery'
+import type { ViewSuggestion } from '@osm-editor-kit/street-imagery'
+import type { StreetImageryMessages } from '../i18n/messages'
 
-const ROLE_LABELS: Record<ViewpointRole, string> = {
-  here: 'Here',
-  'line-start': 'Start',
-  'line-end': 'End',
-  'into-node': 'Junction',
-  custom: 'View',
-}
-
-export const viewpointRoleLabel = (role: ViewpointRole): string => ROLE_LABELS[role]
-
-/** Short human label, e.g. "Start → forward", "Here · N", "Junction · in". */
-export const viewSuggestionLabel = ({ viewpoint, direction }: ViewSuggestion): string => {
-  const role = viewpoint.label ?? viewpointRoleLabel(viewpoint.role)
-  switch (direction.kind) {
-    case 'forward':
-      return `${role}, looking along the street`
-    case 'back':
-      return `${role}, looking back along the street`
-    case 'into':
-      return `${role}, looking into the junction`
-    case 'N':
-    case 'E':
-    case 'S':
-    case 'W':
-      return `${role}, looking ${direction.kind}`
-  }
-}
+/** Label of a suggested view, e.g. "Start, looking along the street". */
+export const viewSuggestionLabel = (
+  { viewpoint, direction }: ViewSuggestion,
+  messages: StreetImageryMessages,
+): string =>
+  messages.viewDirection(viewpoint.label ?? messages.viewpointRole[viewpoint.role], direction.kind)

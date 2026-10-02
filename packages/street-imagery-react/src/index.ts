@@ -33,7 +33,7 @@ export {
   viewDirectionKeyFromFeatures,
   type ViewpointLayerProps,
 } from './viewpoints/ViewpointLayer'
-export { viewpointRoleLabel, viewSuggestionLabel } from './viewpoints/viewDirectionLabels'
+export { viewSuggestionLabel } from './viewpoints/viewDirectionLabels'
 export * from './viewpoints/useViewpointSessionStore'
 export * from './viewpoints/useViewSuggestions'
 export {
@@ -46,3 +46,11 @@ export {
 export * from './mapillary/useMapillaryFeatures'
 export { LocationPickOnMap, type LocationPickOnMapProps } from './openers/LocationPickOnMap'
 export * from './openers/useLocationPickStore'
+export { MapillaryFeatureBar, type MapillaryFeatureBarProps } from './mapillary/MapillaryFeatureBar'
+export { STREET_IMAGERY_MESSAGES, type StreetImageryMessages } from './i18n/messages'
+export {
+  StreetImageryLocaleProvider,
+  useStreetImageryI18n,
+  type StreetImageryMessageOverrides,
+} from './i18n/StreetImageryLocaleProvider'
+export { PhotoDate } from './i18n/PhotoDate'

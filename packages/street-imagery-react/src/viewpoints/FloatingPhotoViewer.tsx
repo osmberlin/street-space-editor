@@ -7,7 +7,9 @@ import {
   type PointerEvent,
   type ReactNode,
 } from 'react'
-import { viewpointRoleLabel, viewSuggestionLabel } from './viewDirectionLabels'
+import { PhotoDate } from '../i18n/PhotoDate'
+import { useStreetImageryI18n } from '../i18n/StreetImageryLocaleProvider'
+import { viewSuggestionLabel } from './viewDirectionLabels'
 
 type Layout = { right: number; bottom: number; width: number; minimized: boolean }
 
@@ -81,11 +83,6 @@ const ToolbarButton = ({
   </button>
 )
 
-const formatShortDate = (capturedAt: number | null | undefined) =>
-  capturedAt == null
-    ? '—'
-    : new Intl.DateTimeFormat('en', { year: '2-digit', month: 'short' }).format(capturedAt)
-
 const SuggestionChip = ({
   suggestion,
   active,
@@ -95,11 +92,12 @@ const SuggestionChip = ({
   active: boolean
   onSelect: () => void
 }) => {
+  const { messages } = useStreetImageryI18n()
   const best = suggestion.candidates[0]
-  const label = viewSuggestionLabel(suggestion)
+  const label = viewSuggestionLabel(suggestion, messages)
   return (
     <button
-      aria-label={best ? label : `${label} (no photo)`}
+      aria-label={best ? label : messages.viewer.noPhoto(label)}
       aria-pressed={active}
       className={[
         'inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs whitespace-nowrap',
@@ -111,10 +109,12 @@ const SuggestionChip = ({
       ].join(' ')}
       disabled={!best}
       onClick={onSelect}
-      title={best ? label : `${label}: no matching photo`}
+      title={best ? label : messages.viewer.noMatchingPhoto(label)}
       type="button"
     >
-      <span className="font-medium">{viewpointRoleLabel(suggestion.viewpoint.role)}</span>
+      <span className="font-medium">
+        {suggestion.viewpoint.label ?? messages.viewpointRole[suggestion.viewpoint.role]}
+      </span>
       <span
         aria-hidden
         className="inline-flex"
@@ -122,9 +122,14 @@ const SuggestionChip = ({
       >
         <Icon className="size-3" path={ICONS.arrow} />
       </span>
-      <span className={active ? 'text-fuchsia-100' : 'text-slate-400'}>
-        {formatShortDate(best?.photo.capturedAt)}
-      </span>
+      {best ? (
+        <PhotoDate
+          className={active ? 'text-fuchsia-100' : 'text-slate-400'}
+          timestamp={best.photo.capturedAt}
+        />
+      ) : (
+        <span className="text-slate-400">—</span>
+      )}
     </button>
   )
 }
@@ -189,11 +194,15 @@ export const FloatingPhotoViewer = ({
   drawer,
   storageKey = 'street-imagery:floating-viewer',
 }: FloatingPhotoViewerProps) => {
+  const { messages } = useStreetImageryI18n()
   const [layout, setLayout] = useState<Layout>(() => readLayout(storageKey))
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const dragRef = useRef<{ x: number; y: number; layout: Layout; mode: 'move' | 'resize' } | null>(
-    null,
-  )
+  const dragRef = useRef<{
+    x: number
+    y: number
+    layout: Layout
+    mode: 'move' | 'resize'
+  } | null>(null)
 
   const updateLayout = (next: Layout) => {
     setLayout(next)
@@ -277,7 +286,7 @@ export const FloatingPhotoViewer = ({
 
   return (
     <section
-      aria-label="Photo viewer"
+      aria-label={messages.viewer.regionLabel}
       className="absolute z-10 flex max-h-[calc(100%-1rem)] flex-col overflow-hidden rounded-xl bg-white shadow-xl ring-1 ring-slate-200"
       style={{
         right: layout.right,
@@ -317,19 +326,23 @@ export const FloatingPhotoViewer = ({
         <h2 className="min-w-0 flex-1 truncate px-1 text-sm font-semibold text-slate-800">
           {title}
         </h2>
-        <ToolbarButton disabled={!canGoBack} label="Back in history ([)" onClick={onBack}>
+        <ToolbarButton disabled={!canGoBack} label={messages.viewer.backInHistory} onClick={onBack}>
           <Icon path={ICONS.undo} />
         </ToolbarButton>
-        <ToolbarButton disabled={!canGoForward} label="Forward in history (])" onClick={onForward}>
+        <ToolbarButton
+          disabled={!canGoForward}
+          label={messages.viewer.forwardInHistory}
+          onClick={onForward}
+        >
           <Icon path={ICONS.redo} />
         </ToolbarButton>
         <ToolbarButton
-          label="Minimize"
+          label={messages.viewer.minimize}
           onClick={() => updateLayout({ ...layout, minimized: true })}
         >
           <Icon path={ICONS.minimize} />
         </ToolbarButton>
-        <ToolbarButton label="Close (Esc)" onClick={onClose}>
+        <ToolbarButton label={messages.viewer.close} onClick={onClose}>
           <Icon path={ICONS.close} />
         </ToolbarButton>
       </header>
@@ -338,11 +351,13 @@ export const FloatingPhotoViewer = ({
         <div className="border-b border-slate-100 px-2 py-1.5">{toolbar}</div>
       ) : suggestions.length > 0 ? (
         <nav
-          aria-label="Suggested views"
+          aria-label={messages.viewer.suggestedViews}
           className="flex gap-1 overflow-x-auto border-b border-slate-100 px-2 py-1.5"
-          title="Suggested views: where the photo is taken from, and which way it looks"
+          title={messages.viewer.suggestedViewsHint}
         >
-          <span className="shrink-0 self-center pr-0.5 text-xs text-slate-500">Views</span>
+          <span className="shrink-0 self-center pr-0.5 text-xs text-slate-500">
+            {messages.viewer.views}
+          </span>
           {suggestions.map((suggestion) => (
             <SuggestionChip
               active={suggestion.direction.key === activeDirectionKey}

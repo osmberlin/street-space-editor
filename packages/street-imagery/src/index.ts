@@ -53,3 +53,4 @@ export {
 export * from './viewpoints'
 export * from './mapillary'
 export * from './openers'
+export * from './i18n'

@@ -43,6 +43,8 @@ export type NormalizedPhoto = {
   originalLngLat?: [number, number]
   /** Uploader id (Mapillary `creator_id`), to highlight or filter own captures. */
   creatorId?: string
+  /** Username of the creator, where the source gives it (needed for attribution). */
+  creatorName?: string
   /** Mapillary `organization_id`; only on some images. */
   organizationId?: string
   /** Direct thumbnail URL when the list API already provides one. */

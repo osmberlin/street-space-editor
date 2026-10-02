@@ -1,3 +1,4 @@
+import { DEFAULT_STREET_IMAGERY_LOCALE, formatMonth, type StreetImageryLocale } from '../i18n'
 import { bearingDeg, distanceMeters, type LngLat } from '../viewpoints/geometry'
 
 /**
@@ -249,14 +250,10 @@ export const cameraPitch = (rotation: readonly number[]): number => {
 export const dayLabels = (
   day: string,
   now: number,
-  locale?: string,
+  locale: StreetImageryLocale = DEFAULT_STREET_IMAGERY_LOCALE,
 ): { month: string; age: string } => {
   const date = new Date(`${day}T12:00:00Z`)
-  const month = date.toLocaleDateString(locale, {
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'UTC',
-  })
+  const month = formatMonth(date, locale)
   const days = Math.max(0, Math.round((now - date.getTime()) / 86_400_000))
   const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'narrow' })
   const age =
