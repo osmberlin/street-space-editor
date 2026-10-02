@@ -13,7 +13,11 @@ export type ViewpointPhotoSource = {
   fetchNear: (lngLat: LngLat, signal?: AbortSignal) => Promise<NormalizedPhoto[]>
 }
 
-/** Mapillary radius search: up to 50 images within 50 m. */
+/**
+ * Mapillary radius search: up to 50 images within 50 m. In dense places the 50 are not all there
+ * is; apps whose map shows Mapillary use `mapillaryTilePhotoSource` (entry
+ * `providers/mapillary`) instead.
+ */
 export const mapillaryPhotoSource: ViewpointPhotoSource = {
   id: 'mapillary',
   fetchNear: (lngLat, signal) => fetchMapillaryImagesNearPoint(lngLat, {}, signal),

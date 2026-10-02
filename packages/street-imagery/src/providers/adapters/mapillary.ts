@@ -1,4 +1,5 @@
 import type { Feature } from 'geojson'
+import type { ViewpointPhotoSource } from '../../viewpoints/photoSources'
 import { pointLngLat } from '../fetchMvt'
 import { fetchMapillaryMvtTiles } from '../mapillaryShared'
 import type { Bbox, NormalizedPhoto, NormalizedSequence, ProviderAdapter } from '../model'
@@ -94,4 +95,27 @@ export const mapillaryAdapter: ProviderAdapter = {
   id: 'mapillary',
   fetchPhotos,
   fetchSequences,
+}
+
+/** Search radius of `mapillaryTilePhotoSource`; the ranking keeps photos within 50 m. */
+const TILE_SOURCE_RADIUS_METERS = 60
+
+/**
+ * Photos near a point for suggested views, read from the map tiles: every photo that is a dot on
+ * the map. Prefer it over `mapillaryPhotoSource` (the API's radius search) when the map shows
+ * Mapillary: the API returns at most 50 images, so in dense places nearby photos are missing.
+ * The tiles are cached, so this costs no request when the map has loaded them.
+ */
+export const mapillaryTilePhotoSource: ViewpointPhotoSource = {
+  id: 'mapillary',
+  fetchNear: async ([lng, lat], signal) => {
+    const dLat = TILE_SOURCE_RADIUS_METERS / 111_320
+    const dLng = dLat / Math.max(Math.cos((lat * Math.PI) / 180), 1e-6)
+    const bbox: Bbox = [lng - dLng, lat - dLat, lng + dLng, lat + dLat]
+    const photos = await fetchPhotos(bbox, 15, signal ?? new AbortController().signal)
+    return photos.filter(
+      ({ lngLat: [photoLng, photoLat] }) =>
+        photoLng >= bbox[0] && photoLng <= bbox[2] && photoLat >= bbox[1] && photoLat <= bbox[3],
+    )
+  },
 }

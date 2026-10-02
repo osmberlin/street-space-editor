@@ -61,3 +61,4 @@ export {
   type StreetImageryMessageOverrides,
 } from './i18n/StreetImageryLocaleProvider'
 export { PhotoDate } from './i18n/PhotoDate'
+export { PhotoTypeIcon } from './i18n/PhotoTypeIcon'

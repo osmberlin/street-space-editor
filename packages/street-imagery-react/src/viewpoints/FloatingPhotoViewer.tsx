@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import { PhotoDate } from '../i18n/PhotoDate'
+import { PhotoTypeIcon } from '../i18n/PhotoTypeIcon'
 import { useStreetImageryI18n } from '../i18n/StreetImageryLocaleProvider'
 import { viewSuggestionLabel } from './viewDirectionLabels'
 
@@ -88,11 +89,14 @@ const SuggestionChip = ({
   suggestion,
   active,
   shownPhotoId,
+  showPlace,
   onSelect,
 }: {
   suggestion: ViewSuggestion
   active: boolean
   shownPhotoId: string | null | undefined
+  /** Several viewpoints (start, end, junction …): name the place; one viewpoint needs no name. */
+  showPlace: boolean
   onSelect: (candidate: PhotoCandidate) => void
 }) => {
   const { messages } = useStreetImageryI18n()
@@ -129,10 +133,7 @@ const SuggestionChip = ({
       title={best ? label : messages.viewer.noMatchingPhoto(label)}
       type="button"
     >
-      <span className="flex max-w-full items-center gap-0.5 font-medium">
-        <span className="truncate">
-          {suggestion.viewpoint.label ?? messages.viewpointRole[suggestion.viewpoint.role]}
-        </span>
+      <span className="flex max-w-full items-center gap-1 font-medium">
         <span
           aria-hidden
           className="inline-flex shrink-0"
@@ -140,6 +141,13 @@ const SuggestionChip = ({
         >
           <Icon className="size-3" path={ICONS.arrow} />
         </span>
+        <span className="truncate">
+          {showPlace
+            ? `${suggestion.viewpoint.label ?? messages.viewpointRole[suggestion.viewpoint.role]} `
+            : ''}
+          {messages.compass[Math.round(suggestion.direction.bearing / 45) % 8]}
+        </span>
+        {shown ? <PhotoTypeIcon isPano={shown.photo.isPano} /> : null}
       </span>
       {shown ? (
         <span className={`max-w-full truncate ${active ? 'text-fuchsia-100' : 'text-slate-400'}`}>
@@ -242,6 +250,8 @@ export const FloatingPhotoViewer = ({
   storageKey = 'street-imagery:floating-viewer',
 }: FloatingPhotoViewerProps) => {
   const { messages } = useStreetImageryI18n()
+  const severalViewpoints =
+    new Set(suggestions.map((suggestion) => suggestion.viewpoint.id)).size > 1
   const [layout, setLayout] = useState<Layout>(() => readLayout(storageKey))
   const [drawerOpen, setDrawerOpen] = useState(false)
   const dragRef = useRef<{
@@ -409,6 +419,7 @@ export const FloatingPhotoViewer = ({
               key={suggestion.direction.key}
               onSelect={(candidate) => onSelectSuggestion(suggestion, candidate)}
               shownPhotoId={shownPhotoId}
+              showPlace={severalViewpoints}
               suggestion={suggestion}
             />
           ))}

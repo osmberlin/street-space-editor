@@ -10,7 +10,7 @@ type StreetImageryI18n = { locale: StreetImageryLocale; messages: StreetImageryM
 /** Overrides per group, e.g. `{ feature: { name: germanSignName } }`. */
 export type StreetImageryMessageOverrides = {
   [Group in keyof StreetImageryMessages]?: StreetImageryMessages[Group] extends object
-    ? StreetImageryMessages[Group] extends (...args: never[]) => unknown
+    ? StreetImageryMessages[Group] extends ((...args: never[]) => unknown) | readonly unknown[]
       ? StreetImageryMessages[Group]
       : Partial<StreetImageryMessages[Group]>
     : StreetImageryMessages[Group]
@@ -32,6 +32,8 @@ const mergeMessages = (
         unknownDate: overrides.unknownDate ?? base.unknownDate,
         viewer: { ...base.viewer, ...overrides.viewer },
         viewpointRole: { ...base.viewpointRole, ...overrides.viewpointRole },
+        compass: overrides.compass?.length === 8 ? overrides.compass : base.compass,
+        photoType: { ...base.photoType, ...overrides.photoType },
         viewDirection: overrides.viewDirection ?? base.viewDirection,
       }
     : base

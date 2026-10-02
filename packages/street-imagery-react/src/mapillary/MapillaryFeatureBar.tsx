@@ -6,6 +6,7 @@ import {
   type TargetImage,
 } from '@osm-editor-kit/street-imagery'
 import { PhotoDate } from '../i18n/PhotoDate'
+import { PhotoTypeIcon } from '../i18n/PhotoTypeIcon'
 import { useStreetImageryI18n } from '../i18n/StreetImageryLocaleProvider'
 import { MAPILLARY_FEATURE_BAR_LABELS, type MapillaryFeatureBarLabels } from './featureBarLabels'
 
@@ -84,6 +85,10 @@ export const MapillaryFeatureBar = ({
                 title={`${formatDateTooltip(noon, locale)}\n${labels.dayPhotos(day.images.length, active && day.images.length > 1)}`}
                 type="button"
               >
+                <PhotoTypeIcon
+                  className="mr-1 size-3 align-[-1px]"
+                  isPano={(active ? day.images[shownIndex] : day.best)?.isPano}
+                />
                 <span className="font-medium">{formatMonth(noon, locale)}</span>{' '}
                 <span className={active ? 'text-amber-800' : 'text-slate-500'}>
                   {active ? `${shownIndex + 1}/` : ''}
