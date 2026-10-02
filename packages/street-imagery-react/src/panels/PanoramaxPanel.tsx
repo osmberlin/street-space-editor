@@ -10,6 +10,7 @@ import type {
   PnxSelectEventDetail,
   PnxViewRotatedEventDetail,
 } from './panoramax-photo-viewer.d'
+import { limitPanningToImage } from './panoramaxLimitPanning'
 
 const panoramaxApiEndpoint = () => `${getStreetImageryConfig().panoramaxApiBase}/api`
 
@@ -146,6 +147,16 @@ export const PanoramaxPanel = ({
       })
       resizeObserver.observe(container)
 
+      // The viewer builds its Photo Sphere Viewer a moment after mounting.
+      let stopLimit: (() => void) | null = null
+      const startLimit = () => {
+        if (!stopLimit && viewer.psv) {
+          stopLimit = limitPanningToImage(viewer.psv)
+        }
+      }
+      startLimit()
+      viewer.addEventListener('psv:picture-loaded', startLimit)
+
       readyRef.current = true
 
       const pending = pendingSelectRef.current
@@ -166,6 +177,8 @@ export const PanoramaxPanel = ({
         viewer.removeEventListener('select', onSelect)
         viewer.removeEventListener('psv:picture-loaded', onPictureLoaded)
         viewer.removeEventListener('psv:view-rotated', onViewRotated)
+        viewer.removeEventListener('psv:picture-loaded', startLimit)
+        stopLimit?.()
       }
     },
     [actions, onEaseMapToPoint, onPhotoSelected],

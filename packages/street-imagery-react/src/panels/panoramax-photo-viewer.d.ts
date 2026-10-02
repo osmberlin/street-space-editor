@@ -27,11 +27,13 @@ interface PnxPhotoViewerElement extends HTMLElement {
   sequence: string | null
   'url-parameters': string
   widgets: string
-  psv: {
-    getPictureMetadata(): { gps: [number, number]; id: string } | null | undefined
-    resize(): void
-    dataHelper: { zoomLevelToFov(level: number): number }
-  } | null
+  psv:
+    | ({
+        getPictureMetadata(): { gps: [number, number]; id: string } | null | undefined
+        resize(): void
+        dataHelper: { zoomLevelToFov(level: number): number }
+      } & import('./panoramaxLimitPanning').PsvForPanLimit)
+    | null
   select(seqId?: string | null, picId?: string | null, force?: boolean): void
 }
 
