@@ -177,3 +177,15 @@ describe('helpers', () => {
     expect(north - south).toBeCloseTo(80 / 111_320, 5)
   })
 })
+
+describe('icons', () => {
+  it('signs and objects come from different folders', async () => {
+    const { mapillaryIconUrl } = await import('./icons')
+    expect(mapillaryIconUrl('regulatory--bicycles-only--g1')).toEndWith(
+      '/package_signs/regulatory--bicycles-only--g1.svg',
+    )
+    expect(mapillaryIconUrl('object--traffic-light--cyclists', '/icons/')).toBe(
+      '/icons/package_objects/object--traffic-light--cyclists.svg',
+    )
+  })
+})
