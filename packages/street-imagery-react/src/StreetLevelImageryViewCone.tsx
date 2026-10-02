@@ -7,6 +7,9 @@ import { SELECTION_COLOR } from './StreetLevelImagerySelectionOverlay'
 const CONE_SOURCE_ID = 'view-direction-cone'
 const CONE_FILL_LAYER_ID = 'view-direction-cone-fill'
 
+/** The cone never gets narrower than this, however far the viewer is zoomed in. */
+const MIN_CONE_FOV_DEG = 45
+
 /** Fill of view-direction shapes: the 360° disks, the flat wedges and the shown photo's cone. */
 export const VIEW_SHAPE_FILL_OPACITY = 0.25
 
@@ -64,6 +67,9 @@ export const StreetLevelImageryViewCone = ({
   if (bearing == null) {
     return null
   }
+
+  // A viewer zoomed far in has a field of view of a few degrees: a sliver that is hard to see.
+  fov = Math.max(fov, MIN_CONE_FOV_DEG)
 
   // Larger than the per-photo viewfields, so the shown photo's direction stands out.
   const coneFeature = {
