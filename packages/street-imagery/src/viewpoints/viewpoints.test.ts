@@ -71,16 +71,24 @@ describe('viewpoints', () => {
     expect(kinds).toEqual(['N', 'E', 'S', 'W'])
   })
 
-  it('line viewpoints: start, click, end with forward + back', () => {
+  it('line viewpoints: start, click, end along the line; the click also across it', () => {
     const line = [origin, at(90, 300)]
     const viewpoints = viewpointsFromLine(line, destinationPoint(at(90, 150), 0, 5))
     expect(viewpoints.map((v) => v.role)).toEqual(['line-start', 'here', 'line-end'])
     for (const viewpoint of viewpoints) {
       expect(viewpoint.bearing).toBeCloseTo(90, 0)
       const directions = viewDirections(viewpoint)
-      expect(directions.map((d) => d.kind)).toEqual(['forward', 'back'])
-      expect(directions[1]?.bearing).toBeCloseTo(270, 0)
+      // The clicked spot also looks across the street.
+      expect(directions.map((d) => d.kind)).toEqual(
+        viewpoint.role === 'here' ? ['forward', 'right', 'back', 'left'] : ['forward', 'back'],
+      )
+      expect(directions.find((d) => d.kind === 'back')?.bearing).toBeCloseTo(270, 0)
     }
+    const here = viewpoints.find((v) => v.role === 'here')
+    const across = here
+      ? viewDirections(here).filter((d) => d.kind === 'right' || d.kind === 'left')
+      : []
+    expect(across.map((d) => Math.round(d.bearing))).toEqual([180, 0])
   })
 
   it('line click next to an end is merged into that end', () => {

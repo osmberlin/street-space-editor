@@ -26,10 +26,20 @@ export type Viewpoint = {
 
 /**
  * - `forward` / `back`: along / against the viewpoint bearing
+ * - `right` / `left`: across it, for the clicked spot on a street (house fronts, side streets)
  * - `N` `E` `S` `W`: compass directions for undirected viewpoints
  * - `into`: into a junction (single direction)
  */
-export type ViewDirectionKind = 'forward' | 'back' | 'N' | 'E' | 'S' | 'W' | 'into'
+export type ViewDirectionKind =
+  | 'forward'
+  | 'right'
+  | 'back'
+  | 'left'
+  | 'N'
+  | 'E'
+  | 'S'
+  | 'W'
+  | 'into'
 
 export type ViewDirection = {
   /** Stable key `${viewpointId}:${kind}`. */
@@ -60,10 +70,19 @@ export const viewDirections = (viewpoint: Viewpoint): ViewDirection[] => {
   if (viewpoint.role === 'into-node') {
     return [direction(viewpoint, 'into', viewpoint.bearing)]
   }
-  return [
+  const along = [
     direction(viewpoint, 'forward', viewpoint.bearing),
     direction(viewpoint, 'back', viewpoint.bearing + 180),
   ]
+  // The clicked spot also looks across the street; clockwise like the compass views.
+  return viewpoint.role === 'here'
+    ? [
+        along[0] as ViewDirection,
+        direction(viewpoint, 'right', viewpoint.bearing + 90),
+        along[1] as ViewDirection,
+        direction(viewpoint, 'left', viewpoint.bearing + 270),
+      ]
+    : along
 }
 
 export const viewpointFromPoint = (lngLat: LngLat, id = 'here'): Viewpoint => ({

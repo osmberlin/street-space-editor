@@ -54,6 +54,10 @@ const en: StreetImageryMessages = {
         return `${role}, looking along the street`
       case 'back':
         return `${role}, looking back along the street`
+      case 'right':
+        return `${role}, looking right across the street`
+      case 'left':
+        return `${role}, looking left across the street`
       case 'into':
         return `${role}, looking into the junction`
       default:
@@ -92,6 +96,10 @@ const de: StreetImageryMessages = {
         return `${role}, Blick entlang der Straße`
       case 'back':
         return `${role}, Blick zurück entlang der Straße`
+      case 'right':
+        return `${role}, Blick nach rechts quer zur Straße`
+      case 'left':
+        return `${role}, Blick nach links quer zur Straße`
       case 'into':
         return `${role}, Blick in den Knoten`
       default:
