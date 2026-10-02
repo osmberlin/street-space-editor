@@ -11,6 +11,12 @@ import {
 import { useEffect, useEffectEvent, useRef } from 'react'
 import type { StreetImageryPhotoSelection } from '../types'
 import { useViewerActions } from '../useViewerStore'
+import {
+  setMapillaryViewerOutlines,
+  turnMapillaryViewerTo,
+  type MapillaryLookAt,
+  type MapillaryViewerOutline,
+} from './mapillaryLookAt'
 type MapillaryPanelProps = {
   photo: NormalizedPhoto
   groupPhotos: NormalizedPhoto[]
@@ -20,6 +26,13 @@ type MapillaryPanelProps = {
   onViewerPhoto?: (photo: NormalizedPhoto) => void
   /** 360° photos: turn the view to this map bearing when `photo` opens (e.g. a suggested view). */
   lookAtBearing?: number | null
+  /**
+   * Turn (and zoom) the view to a place when `photo` opens: a sign, a traffic light, a junction.
+   * Works for 360° and flat photos; wins over `lookAtBearing`.
+   */
+  lookAt?: MapillaryLookAt | null
+  /** Outlines to draw in the shown image, e.g. the detections you care about. */
+  outlines?: MapillaryViewerOutline[]
 }
 
 /** Mapillary spherical basic x for a map bearing; x = 0.5 is the image compass direction. */
@@ -32,6 +45,8 @@ export const MapillaryPanel = ({
   onEaseMapToPoint,
   onViewerPhoto,
   lookAtBearing,
+  lookAt,
+  outlines,
 }: MapillaryPanelProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewerRef = useRef<Viewer | null>(null)
@@ -46,11 +61,28 @@ export const MapillaryPanel = ({
   const emitPhotoSelected = useEffectEvent(onPhotoSelected)
   const emitEaseMapToPoint = useEffectEvent(onEaseMapToPoint)
   const turnToWantedBearing = useEffectEvent((viewer: Viewer, image: ViewerImageEvent['image']) => {
+    if (image.id !== photo.photoId) {
+      return
+    }
+    if (lookAt) {
+      void turnMapillaryViewerTo(viewer, image, lookAt)
+        .then((aimedAt) => {
+          // Outline the target itself unless the caller draws its own outlines.
+          if (aimedAt && !outlines && lastViewerPhotoIdRef.current === image.id) {
+            setMapillaryViewerOutlines(viewer, [aimedAt])
+          }
+        })
+        .catch(() => {})
+      return
+    }
     const spherical = image.cameraType === 'spherical' || image.cameraType === 'equirectangular'
     const compass = image.computedCompassAngle ?? image.compassAngle
-    if (image.id === photo.photoId && lookAtBearing != null && spherical && compass != null) {
+    if (lookAtBearing != null && spherical && compass != null) {
       viewer.setCenter([panoCenterX(lookAtBearing, compass), 0.5])
     }
+  })
+  const drawOutlines = useEffectEvent((viewer: Viewer) => {
+    setMapillaryViewerOutlines(viewer, outlines ?? [])
   })
   const emitViewerPhoto = useEffectEvent((viewerPhoto: NormalizedPhoto) =>
     onViewerPhoto?.(viewerPhoto),
@@ -79,6 +111,7 @@ export const MapillaryPanel = ({
         component: {
           cover: false,
           sequence: { visible: true },
+          tag: true,
         },
       })
       viewerRef.current = viewer
@@ -104,6 +137,7 @@ export const MapillaryPanel = ({
         const { image } = event
         lastViewerPhotoIdRef.current = image.id
         turnToWantedBearing(viewer, image)
+        drawOutlines(viewer)
 
         emitPhotoSelected({
           provider: 'mapillary',
@@ -196,10 +230,14 @@ export const MapillaryPanel = ({
     [actions, photo.photoId],
   )
 
+  // Primitive key, so a new `lookAt` object with the same target does not turn the view again.
+  const lookAtKey = lookAt
+    ? `${lookAt.lngLat.join(',')}|${lookAt.outline?.length ?? 0}|${lookAt.value ?? ''}`
+    : String(lookAtBearing)
   useEffect(
-    function turnToBearingOnChange() {
+    function turnToTargetOnChange() {
       const viewer = viewerRef.current
-      if (!viewer || lookAtBearing == null || lastViewerPhotoIdRef.current !== photo.photoId) {
+      if (!viewer || lastViewerPhotoIdRef.current !== photo.photoId) {
         return
       }
       void viewer
@@ -207,7 +245,17 @@ export const MapillaryPanel = ({
         .then((image) => turnToWantedBearing(viewer, image))
         .catch(() => {})
     },
-    [lookAtBearing, photo.photoId],
+    [lookAtKey, photo.photoId],
+  )
+
+  useEffect(
+    function redrawOutlinesOnChange() {
+      const viewer = viewerRef.current
+      if (viewer && navigableRef.current) {
+        drawOutlines(viewer)
+      }
+    },
+    [outlines],
   )
 
   return (

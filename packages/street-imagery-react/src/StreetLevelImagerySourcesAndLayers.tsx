@@ -47,6 +47,11 @@ import { StreetLevelImageryViewCone } from './StreetLevelImageryViewCone'
 export type PhotoFilter = {
   photoTypes?: PhotoTypeFilter[]
   date?: DateRange
+  /**
+   * Which map features (signs, objects) to draw, by Mapillary value. Use `matchesAnyGroup(...)`
+   * for groups like traffic lights or bike signs. Keep the function identity stable.
+   */
+  mapFeatureValue?: (value: string) => boolean
 }
 
 type ProviderLayerProps = {
@@ -260,8 +265,13 @@ const MapFeatureProviderLayer = ({
   const adapter = adapterById[providerId]
   const { data: features = [] } = useProviderMapFeatures(providerId, bbox, zoom)
 
+  const valueFilter = filter?.mapFeatureValue
   const featureCollection =
-    zoom >= adapter.minZoom ? mapFeaturesToFeatureCollection(features) : emptyPointCollection()
+    zoom >= adapter.minZoom
+      ? mapFeaturesToFeatureCollection(
+          valueFilter ? features.filter((feature) => valueFilter(feature.value)) : features,
+        )
+      : emptyPointCollection()
 
   const featureFilter = buildMapFeatureLayerFilter(filter?.date)
   const featureSrcId = featureSourceId(providerId)

@@ -88,3 +88,35 @@ Render `FloatingPhotoViewer` inside a positioned map container. Photos from sugg
 ```css
 @source '../node_modules/@osm-editor-kit/street-imagery-react';
 ```
+
+## Look at a place, outline detections
+
+```tsx
+import { JUNCTION_DETECTION_GROUPS, matchesAnyGroup, PLACE_TARGET } from '@osm-editor-kit/street-imagery'
+import {
+  StreetLevelImageryViewer,
+  useMapillaryImageDetections,
+  useMapillaryMapFeatureImages,
+  useMapillaryMapFeaturesNear,
+} from '@osm-editor-kit/street-imagery-react'
+
+// Turn any Mapillary photo (360° or flat) towards a junction:
+<StreetLevelImageryViewer photo={photo} lookAt={{ lngLat: node, shape: PLACE_TARGET }} … />
+
+// Turn to a detected sign or object and outline it. `value` lets the viewer find the image's own
+// detection when Mapillary linked no outline for this image:
+const { data } = useMapillaryMapFeatureImages(featureId)
+<StreetLevelImageryViewer photo={…} lookAt={{ lngLat: data.feature.lngLat, value: data.feature.value }} … />
+
+// Features around a point, and only the outlines you care about in the shown image:
+const { data: features } = useMapillaryMapFeaturesNear(node, { radiusMeters: 40 })
+const { data: detections } = useMapillaryImageDetections(photo.photoId, {
+  filter: matchesAnyGroup(JUNCTION_DETECTION_GROUPS),
+  filterKey: 'junction',
+})
+<StreetLevelImageryViewer photo={photo} outlines={detections?.map((d) => ({ id: d.id, outline: d.outline }))} … />
+```
+
+- Map layers: `filter.mapFeatureValue` limits which signs/objects are drawn (`matchesAnyGroup(SIGN_GROUPS)`).
+- Suggested views: `useViewSuggestions(viewpoints, { sources: [mapillaryPhotoSource, streetViewPhotoSource] })`.
+- `turnMapillaryViewerTo` / `setMapillaryViewerOutlines` work on a mapillary-js `Viewer` you own.

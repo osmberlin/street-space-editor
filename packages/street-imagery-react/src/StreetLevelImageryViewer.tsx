@@ -1,5 +1,6 @@
 import type { NormalizedPhoto } from '@osm-editor-kit/street-imagery'
 import { lazy, Suspense } from 'react'
+import type { MapillaryLookAt, MapillaryViewerOutline } from './panels/mapillaryLookAt'
 import type { StreetImageryPhotoSelection } from './types'
 
 const MapillaryPanel = lazy(() =>
@@ -23,6 +24,10 @@ type StreetLevelImageryViewerProps = {
   onViewerPhoto?: (photo: NormalizedPhoto) => void
   /** Mapillary 360° photos: initial view bearing (e.g. a suggested view direction). */
   lookAtBearing?: number | null
+  /** Mapillary: turn and zoom to a place (sign, traffic light, junction); wins over `lookAtBearing`. */
+  lookAt?: MapillaryLookAt | null
+  /** Mapillary: outlines to draw in the shown image. */
+  outlines?: MapillaryViewerOutline[]
 }
 
 const ViewerPanelPlaceholder = () => (
@@ -38,6 +43,8 @@ export const StreetLevelImageryViewer = ({
   onEaseMapToPoint,
   onViewerPhoto,
   lookAtBearing,
+  lookAt,
+  outlines,
 }: StreetLevelImageryViewerProps) => {
   if (photo.providerId === 'mapillary') {
     return (
@@ -46,7 +53,9 @@ export const StreetLevelImageryViewer = ({
           groupPhotos={groupPhotos}
           onEaseMapToPoint={onEaseMapToPoint}
           onPhotoSelected={onPhotoSelected}
+          lookAt={lookAt}
           lookAtBearing={lookAtBearing}
+          outlines={outlines}
           onViewerPhoto={onViewerPhoto}
           photo={photo}
         />

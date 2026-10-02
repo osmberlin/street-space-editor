@@ -36,3 +36,11 @@ export {
 export { viewpointRoleLabel, viewSuggestionLabel } from './viewpoints/viewDirectionLabels'
 export * from './viewpoints/useViewpointSessionStore'
 export * from './viewpoints/useViewSuggestions'
+export {
+  mapillaryViewFor,
+  setMapillaryViewerOutlines,
+  turnMapillaryViewerTo,
+  type MapillaryLookAt,
+  type MapillaryViewerOutline,
+} from './panels/mapillaryLookAt'
+export * from './mapillary/useMapillaryFeatures'
