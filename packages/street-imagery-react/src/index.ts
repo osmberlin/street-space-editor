@@ -26,8 +26,10 @@ export { PanoramaxPanel } from './panels/PanoramaxPanel'
 export * from './useViewerStore'
 export {
   FloatingPhotoViewer,
+  FloatingViewerInfoButton,
   type FloatingPhotoViewerProps,
 } from './viewpoints/FloatingPhotoViewer'
+export { PhotoDetailsDialog, type PhotoDetailsDialogProps } from './viewpoints/PhotoDetailsDialog'
 export {
   VIEWPOINT_DEFAULT_COLOR,
   VIEWPOINT_DIRECTION_LAYER_ID,

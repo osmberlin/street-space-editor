@@ -33,6 +33,7 @@ const mergeMessages = (
         viewer: { ...base.viewer, ...overrides.viewer },
         viewpointRole: { ...base.viewpointRole, ...overrides.viewpointRole },
         viewDirection: overrides.viewDirection ?? base.viewDirection,
+        details: { ...base.details, ...overrides.details },
         feature: { ...base.feature, ...overrides.feature },
       }
     : base

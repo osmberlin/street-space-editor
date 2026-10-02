@@ -38,7 +38,15 @@ type PnxPictureMetadata = {
     license?: string
     'view:azimuth'?: number
     'quality:horizontal_accuracy'?: number
-    'pers:interior_orientation'?: { camera_manufacturer?: string; camera_model?: string }
+    'pers:interior_orientation'?: {
+      camera_manufacturer?: string
+      camera_model?: string
+      focal_length?: number
+    }
+    'original_file:name'?: string
+    'original_file:size'?: number
+    'geovisio:rank_in_collection'?: number
+    exif?: Record<string, unknown>
   }
 }
 

@@ -23,6 +23,10 @@ export const panoramaxPhotoFromMetadata = (metadata: PnxPictureMetadata): Normal
   const isFlat =
     crop?.croppedWidth != null && crop.fullWidth != null && crop.croppedWidth < crop.fullWidth
   const uploadedAt = toMs(properties.created)
+  const exifEntries = Object.entries(properties.exif ?? {})
+    .filter(([, value]) => typeof value === 'string' || typeof value === 'number')
+    .map(([key, value]) => [key, String(value)] as const)
+  const exif = exifEntries.length > 0 ? Object.fromEntries(exifEntries) : null
 
   const details: PhotoDetails = {
     ...(creatorContact && creatorContact !== creatorName ? { creatorContact } : {}),
@@ -40,6 +44,17 @@ export const panoramaxPhotoFromMetadata = (metadata: PnxPictureMetadata): Normal
     ...(metadata.origInstance?.instance_name
       ? { instance: metadata.origInstance.instance_name }
       : {}),
+    ...(camera?.focal_length != null ? { focalLengthMm: camera.focal_length } : {}),
+    ...(properties['original_file:name']
+      ? { originalFileName: properties['original_file:name'] }
+      : {}),
+    ...(properties['original_file:size'] != null
+      ? { originalFileSizeBytes: properties['original_file:size'] }
+      : {}),
+    ...(properties['geovisio:rank_in_collection'] != null
+      ? { rankInSequence: properties['geovisio:rank_in_collection'] }
+      : {}),
+    ...(exif ? { exif } : {}),
   }
 
   return {

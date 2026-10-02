@@ -22,3 +22,4 @@
 - Sequence lines run through their loaded photos (`alignLineToPoints` in the core package adds the missing corners).
 - **Panoramax panel**: `onViewerPhoto` gives creator, licence, local capture time, camera and position accuracy (`NormalizedPhoto.details`); `hideLegend` hides the viewer's own legend drawer. Flat photos can no longer be panned or zoomed out of sight: at least 30 % of the image stays in view.
 - `PhotoDate` takes `localDateTime` for a tooltip with the camera's local date and time.
+- `PhotoDetailsDialog`: a modal with everything known about a photo (capture, camera, position, source, raw EXIF). `FloatingPhotoViewer` takes `titleActions`, e.g. `FloatingViewerInfoButton` to open it.

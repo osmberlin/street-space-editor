@@ -58,6 +58,7 @@ const ICONS = {
   minimize: 'M5 12h14',
   expand: 'M4 14v6h6M20 10V4h-6M14 10l6-6M10 14l-6 6',
   arrow: 'M12 20V5M6 11l6-6 6 6',
+  info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 11v5M12 8h.01',
 }
 
 const ToolbarButton = ({
@@ -134,8 +135,23 @@ const SuggestionChip = ({
   )
 }
 
+/** Info button for `titleActions`; `label` is its tooltip and accessible name. */
+export const FloatingViewerInfoButton = ({
+  label,
+  onClick,
+}: {
+  label: string
+  onClick: () => void
+}) => (
+  <ToolbarButton label={label} onClick={onClick}>
+    <Icon path={ICONS.info} />
+  </ToolbarButton>
+)
+
 export type FloatingPhotoViewerProps = {
   title: ReactNode
+  /** Buttons right after the title, e.g. `<FloatingViewerInfoButton>` for the photo's details. */
+  titleActions?: ReactNode
   /** Suggested views (viewpoint × direction); shown as chips. Empty hides the strip. */
   suggestions: ViewSuggestion[]
   activeDirectionKey: string | null
@@ -178,6 +194,7 @@ export type FloatingPhotoViewerProps = {
  */
 export const FloatingPhotoViewer = ({
   title,
+  titleActions,
   suggestions,
   activeDirectionKey,
   onSelectSuggestion,
@@ -323,9 +340,10 @@ export const FloatingPhotoViewer = ({
             </ToolbarButton>
           </>
         ) : null}
-        <h2 className="min-w-0 flex-1 truncate px-1 text-sm font-semibold text-slate-800">
-          {title}
-        </h2>
+        <div className="flex min-w-0 flex-1 items-center gap-0.5">
+          <h2 className="min-w-0 truncate px-1 text-sm font-semibold text-slate-800">{title}</h2>
+          {titleActions}
+        </div>
         <ToolbarButton disabled={!canGoBack} label={messages.viewer.backInHistory} onClick={onBack}>
           <Icon path={ICONS.undo} />
         </ToolbarButton>

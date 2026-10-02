@@ -90,6 +90,15 @@ export type PhotoDetails = {
   positionAccuracyMeters?: number
   /** Server the photo is stored on, for federated providers (Panoramax). */
   instance?: string
+  /** Focal length of the lens, in millimeters. */
+  focalLengthMm?: number
+  /** Name and size (bytes) of the uploaded file. */
+  originalFileName?: string
+  originalFileSizeBytes?: number
+  /** Position of the photo in its sequence, starting at 1. */
+  rankInSequence?: number
+  /** Raw EXIF tags as the provider stores them, e.g. `Exif.Image.Make`. */
+  exif?: Record<string, string>
 }
 
 export type NormalizedSequence = {
