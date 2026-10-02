@@ -26,6 +26,8 @@ export const normalizeMapillaryImageFeature = (
     isPano: typeof props.is_pano === 'boolean' ? props.is_pano : null,
     heading: typeof props.compass_angle === 'number' ? props.compass_angle : null,
     lngLat,
+    ...(props.creator_id != null ? { creatorId: String(props.creator_id) } : {}),
+    ...(props.organization_id != null ? { organizationId: String(props.organization_id) } : {}),
   }
 }
 

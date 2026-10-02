@@ -207,6 +207,7 @@ describe('normalizeMapillaryGraphImage', () => {
       isPano: false,
       heading: 20,
       lngLat: [3, 4],
+      originalLngLat: [1, 2],
     })
   })
 })

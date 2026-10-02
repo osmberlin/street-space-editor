@@ -12,6 +12,7 @@ const FIELDS = [
   'geometry',
   'computed_geometry',
   'sequence',
+  'creator',
 ].join(',')
 
 /** API limits (Mapillary image radius search, 2026). The API returns at most 50 images. */
@@ -29,6 +30,7 @@ export type MapillaryGraphImage = {
   geometry?: GraphPoint
   computed_geometry?: GraphPoint
   sequence?: string
+  creator?: { id?: string }
 }
 
 export const normalizeMapillaryGraphImage = (
@@ -47,6 +49,10 @@ export const normalizeMapillaryGraphImage = (
     isPano: typeof image.is_pano === 'boolean' ? image.is_pano : null,
     heading: typeof heading === 'number' ? heading : null,
     lngLat: [point.coordinates[0], point.coordinates[1]],
+    ...(image.computed_geometry && image.geometry
+      ? { originalLngLat: [image.geometry.coordinates[0], image.geometry.coordinates[1]] }
+      : {}),
+    ...(image.creator?.id ? { creatorId: String(image.creator.id) } : {}),
   }
 }
 

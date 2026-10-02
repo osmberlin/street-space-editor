@@ -36,6 +36,15 @@ export type NormalizedPhoto = {
   isPano: boolean | null
   heading: number | null
   lngLat: [number, number]
+  /**
+   * The camera's GPS position when `lngLat` is a provider-computed one (Mapillary Graph API).
+   * Computed positions match detections better but are sometimes far off.
+   */
+  originalLngLat?: [number, number]
+  /** Uploader id (Mapillary `creator_id`), to highlight or filter own captures. */
+  creatorId?: string
+  /** Mapillary `organization_id`; only on some images. */
+  organizationId?: string
   /** Direct thumbnail URL when the list API already provides one. */
   thumbUrl?: string
   /** Full-resolution image URL when the list API already provides one. */

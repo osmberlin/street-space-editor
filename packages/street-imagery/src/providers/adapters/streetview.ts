@@ -1,3 +1,4 @@
+import { peekStreetImageryConfig } from '../../config'
 import type { NormalizedPhoto, ProviderAdapter } from '../model'
 
 const STREET_VIEW_METADATA_API = 'https://maps.googleapis.com/maps/api/streetview/metadata'
@@ -13,11 +14,9 @@ export type StreetViewMetadataResponse = {
   pano_id?: string
 }
 
-export const getGoogleMapsApiKey = (): string | undefined => {
-  const env = (import.meta as ImportMeta & { env?: Record<string, unknown> }).env
-  const key = env?.VITE_GOOGLE_MAPS_API_KEY
-  return typeof key === 'string' && key.length > 0 ? key : undefined
-}
+/** The key from `setStreetImageryConfig({ googleMapsApiKey })`. The package reads no env vars. */
+export const getGoogleMapsApiKey = (): string | undefined =>
+  peekStreetImageryConfig()?.googleMapsApiKey
 
 export const parseStreetViewDate = (value: unknown): number | null => {
   if (typeof value !== 'string' || value.length === 0) {

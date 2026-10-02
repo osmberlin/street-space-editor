@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test'
+import { createStreetImageryConfig, setStreetImageryConfig } from '../../config'
 import {
   fetchStreetViewMetadata,
   normalizeStreetViewMetadata,
@@ -53,23 +54,21 @@ describe('normalizeStreetViewMetadata', () => {
 })
 
 describe('fetchStreetViewMetadata', () => {
-  const env = import.meta.env as Record<string, string | undefined>
-  let originalKey: string | undefined
   let originalFetch: typeof fetch
 
   beforeEach(() => {
-    originalKey = env.VITE_GOOGLE_MAPS_API_KEY
-    env.VITE_GOOGLE_MAPS_API_KEY = 'test-key'
+    setStreetImageryConfig(
+      createStreetImageryConfig({ mapillaryToken: 'token', googleMapsApiKey: 'test-key' }),
+    )
     originalFetch = globalThis.fetch
   })
 
   afterEach(() => {
-    env.VITE_GOOGLE_MAPS_API_KEY = originalKey
     globalThis.fetch = originalFetch
   })
 
   it('returns null when the API key is missing', async () => {
-    delete env.VITE_GOOGLE_MAPS_API_KEY
+    setStreetImageryConfig(createStreetImageryConfig({ mapillaryToken: 'token' }))
     await expect(
       fetchStreetViewMetadata(37.4, -122.1, new AbortController().signal),
     ).resolves.toBeNull()
