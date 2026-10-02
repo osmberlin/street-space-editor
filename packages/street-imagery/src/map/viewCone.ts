@@ -23,6 +23,17 @@ const offsetMeters = (
 /** View cone radius in meters; ~50 m at z14, scales with zoom like click search radius. */
 export const coneRadiusMeters = (zoom: number): number => 50 * 2 ** (14 - zoom)
 
+/** From this zoom on, view-direction shapes keep their size on screen. */
+export const VIEW_SHAPE_FULL_SIZE_ZOOM = 18
+
+/**
+ * Radius of the view-direction shapes of photos (360° disks, wedges, the shown photo's cone).
+ * Zoomed in they keep their size on screen; below `VIEW_SHAPE_FULL_SIZE_ZOOM` they keep their
+ * size on the ground (about 3 m), so they shrink on screen instead of covering the map.
+ */
+export const viewShapeRadiusMeters = (zoom: number): number =>
+  coneRadiusMeters(Math.max(zoom, VIEW_SHAPE_FULL_SIZE_ZOOM))
+
 export const viewConeGeoJson = (
   lngLat: [number, number],
   bearingDeg: number,

@@ -350,7 +350,10 @@ const PhotoProviderLayer = ({
         layout={{ 'circle-sort-key': PHOTO_SORT_KEY }}
         paint={{
           'circle-radius': dotRadius,
-          'circle-color': ['case', inActiveSequence, BASE_COLOR, AGE_SHADE],
+          // Zoomed out there are no view shapes; the dots carry the style colour then.
+          'circle-color': viewfieldsActive
+            ? ['case', inActiveSequence, BASE_COLOR, AGE_SHADE]
+            : photoCircleColor,
         }}
       />
     </>
@@ -419,7 +422,7 @@ export type StreetLevelImagerySourcesAndLayersProps = {
   options: {
     config?: StreetImageryConfig
     showSequences?: boolean
-    /** Heading wedges / 360° disks per photo, from zoom 16, capped for dense areas. Default true. */
+    /** Heading wedges / 360° disks per photo, from zoom 17, capped for dense areas. Default true. */
     showViewfields?: boolean
     showViewCone?: boolean
     showSelectionHighlight?: boolean

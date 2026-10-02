@@ -23,7 +23,12 @@ export {
   type PhotoTypeFilter,
 } from './filters/searchFilters'
 export { alignLineToPoints } from './map/alignLine'
-export { coneRadiusMeters, viewConeGeoJson } from './map/viewCone'
+export {
+  coneRadiusMeters,
+  VIEW_SHAPE_FULL_SIZE_ZOOM,
+  viewConeGeoJson,
+  viewShapeRadiusMeters,
+} from './map/viewCone'
 export {
   emptyPolygonCollection,
   FLAT_VIEWFIELD_FOV_DEG,

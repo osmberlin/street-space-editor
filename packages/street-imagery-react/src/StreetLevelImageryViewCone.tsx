@@ -1,4 +1,4 @@
-import { coneRadiusMeters, viewConeGeoJson } from '@osm-editor-kit/street-imagery'
+import { viewConeGeoJson, viewShapeRadiusMeters } from '@osm-editor-kit/street-imagery'
 import type { NormalizedPhoto } from '@osm-editor-kit/street-imagery'
 import type { DataDrivenPropertyValueSpecification } from 'maplibre-gl'
 import { Layer, Source } from 'react-map-gl/maplibre'
@@ -73,7 +73,7 @@ export const StreetLevelImageryViewCone = ({
 
   // Larger than the per-photo viewfields, so the shown photo's direction stands out.
   const coneFeature = {
-    ...viewConeGeoJson(apex, bearing, fov, coneRadiusMeters(zoom) * scale),
+    ...viewConeGeoJson(apex, bearing, fov, viewShapeRadiusMeters(zoom) * scale),
     properties: { isPano: selectedPhoto.isPano, capturedAt: selectedPhoto.capturedAt },
   }
 

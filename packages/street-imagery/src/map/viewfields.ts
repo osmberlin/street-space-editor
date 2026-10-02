@@ -1,6 +1,6 @@
 import type { Feature, FeatureCollection, Polygon } from 'geojson'
 import type { Bbox, NormalizedPhoto } from '../providers/model'
-import { coneRadiusMeters } from './viewCone'
+import { viewShapeRadiusMeters } from './viewCone'
 
 /** Narrow heading wedge for flat (directional) photos — iD-style viewfield. */
 export const FLAT_VIEWFIELD_FOV_DEG = 55
@@ -9,7 +9,7 @@ export const FLAT_VIEWFIELD_FOV_DEG = 55
 export const PANO_VIEWFIELD_FOV_DEG = 360
 
 /** Viewfields only make sense (and stay cheap) when zoomed in on a few streets. */
-export const VIEWFIELD_MIN_ZOOM = 16
+export const VIEWFIELD_MIN_ZOOM = 17
 
 /** Upper bound of viewfield polygons per provider; dense areas would otherwise freeze the map. */
 export const VIEWFIELD_MAX_FEATURES = 1500
@@ -98,7 +98,7 @@ export const photosToViewfieldsFeatureCollection = (
   { bbox, maxFeatures = VIEWFIELD_MAX_FEATURES }: ViewfieldOptions = {},
 ): FeatureCollection<Polygon, ViewfieldPhotoProps> => {
   // Half-zoom steps: sizes barely change in between, and callers can reuse the result.
-  const radius = coneRadiusMeters(Math.floor(zoom * 2) / 2)
+  const radius = viewShapeRadiusMeters(Math.floor(zoom * 2) / 2)
   const features: Feature<Polygon, ViewfieldPhotoProps>[] = []
 
   const inView = bbox ? photos.filter((photo) => inBbox(photo.lngLat, bbox)) : photos
