@@ -70,6 +70,8 @@ type ProviderLayerProps = {
   activeSequenceId?: string | null
   /** A photo is shown (of any provider): everything but its sequence is muted. */
   hasActiveSequence: boolean
+  /** The shown photo, when it is this provider's. */
+  shownPhotoId?: string | null
 }
 
 const CIRCLE_RADIUS: ['interpolate', ['linear'], ['zoom'], ...number[]] = [
@@ -119,6 +121,7 @@ const PhotoProviderLayer = ({
   photoCircleColor,
   activeSequenceId,
   hasActiveSequence,
+  shownPhotoId,
 }: ProviderLayerProps) => {
   const adapter = adapterById[providerId]
   const { data: photos = [] } = useProviderPhotos(providerId, bbox, zoom)
@@ -152,13 +155,22 @@ const PhotoProviderLayer = ({
     ['get', 'sequenceId'],
     activeSequenceId ?? '',
   ]
-  // Lines and dots: black; the shown photo's sequence stands out, the rest steps back.
-  const lineAndDotOpacity: ExpressionSpecification = [
+  // While a photo is shown, lines and view shapes of the other sequences step back. Dots stay
+  // solid black: see-through dots on see-through lines give muddy overlaps.
+  const lineOpacity: ExpressionSpecification = [
     'case',
     inActiveSequence,
     1,
-    hasActiveSequence ? 0.3 : 0.7,
+    hasActiveSequence ? 0.3 : 1,
   ]
+  const viewShapeOpacity = (full: number): ExpressionSpecification => [
+    'case',
+    inActiveSequence,
+    full,
+    hasActiveSequence ? full * 0.4 : full,
+  ]
+  // The shown photo has the live view cone; its static shape would only double it.
+  const notShownPhoto: ExpressionSpecification = ['!=', ['get', 'photoId'], shownPhotoId ?? '']
   const photoFilter = buildPhotoLayerFilter(filter?.photoTypes, filter?.date)
   const photoSrcId = photoSourceId(providerId)
   const viewfieldSrcId = viewfieldSourceId(providerId)
@@ -253,8 +265,8 @@ const PhotoProviderLayer = ({
             }}
             paint={{
               'line-color': BASE_COLOR,
-              'line-width': ['case', inActiveSequence, ACTIVE_LINE_WIDTH, 2],
-              'line-opacity': lineAndDotOpacity,
+              'line-width': ['case', inActiveSequence, ACTIVE_LINE_WIDTH, 1.25],
+              'line-opacity': lineOpacity,
             }}
           />
         </>
@@ -272,9 +284,10 @@ const PhotoProviderLayer = ({
             id={viewfieldLayerId(providerId)}
             type="fill"
             source={viewfieldSrcId}
+            filter={notShownPhoto}
             paint={{
               'fill-color': photoCircleColor,
-              'fill-opacity': VIEW_SHAPE_FILL_OPACITY,
+              'fill-opacity': viewShapeOpacity(VIEW_SHAPE_FILL_OPACITY),
               'fill-outline-color': 'rgba(0, 0, 0, 0)',
             }}
           />
@@ -283,10 +296,11 @@ const PhotoProviderLayer = ({
             id={viewfieldLineLayerId(providerId)}
             type="line"
             source={viewfieldSrcId}
+            filter={notShownPhoto}
             paint={{
               'line-color': photoCircleColor,
               'line-width': 0.5,
-              'line-opacity': 0.3,
+              'line-opacity': viewShapeOpacity(0.3),
             }}
           />
         </>
@@ -308,7 +322,6 @@ const PhotoProviderLayer = ({
         paint={{
           'circle-radius': CIRCLE_RADIUS,
           'circle-color': BASE_COLOR,
-          'circle-opacity': lineAndDotOpacity,
         }}
       />
     </>
@@ -466,6 +479,9 @@ export const StreetLevelImagerySourcesAndLayers = ({
             mapFeatureCircleColor={mapFeatureCircleColor}
             activeSequenceId={providerId === selectedProviderId ? activeSequenceId : null}
             hasActiveSequence={activeSequenceId != null}
+            shownPhotoId={
+              showViewCone && providerId === selectedProviderId ? selectedPhoto?.photoId : null
+            }
             photoCircleColor={photoCircleColor}
             providerId={providerId}
             showSequences={showSequences}

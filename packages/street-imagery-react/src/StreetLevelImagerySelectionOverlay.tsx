@@ -15,8 +15,8 @@ const SEQUENCE_HIGHLIGHT_SOURCE_ID = 'sequence-highlight'
 /** Lines and photo dots: near black. The shown photo's line is thicker, its marker larger. */
 export const BASE_COLOR = '#171717'
 
-/** @deprecated Same as `BASE_COLOR`; the shown photo no longer has a colour of its own. */
-export const SELECTION_COLOR = BASE_COLOR
+/** The shown photo: outline of its marker and camera pin, and the line between the two. */
+export const SELECTION_COLOR = '#f97316'
 
 /** Below this distance the photo dot and the viewer's camera position count as the same spot. */
 const SAME_POSITION_METERS = 0.75
@@ -130,7 +130,7 @@ export const StreetLevelImagerySelectionOverlay = ({
         id="selection-connector-layer"
         type="line"
         source={CONNECTOR_SOURCE_ID}
-        paint={{ 'line-color': BASE_COLOR, 'line-width': 1.5, 'line-dasharray': [2, 1.5] }}
+        paint={{ 'line-color': SELECTION_COLOR, 'line-width': 1.5, 'line-dasharray': [2, 1.5] }}
       />
 
       <Source id={POINTS_SOURCE_ID} type="geojson" data={points} />
@@ -141,8 +141,10 @@ export const StreetLevelImagerySelectionOverlay = ({
         source={POINTS_SOURCE_ID}
         filter={['==', ['get', 'kind'], 'dot']}
         paint={{
-          'circle-radius': 7,
+          'circle-radius': 6,
           'circle-color': BASE_COLOR,
+          'circle-stroke-width': 2,
+          'circle-stroke-color': SELECTION_COLOR,
         }}
       />
       <Layer
@@ -151,8 +153,10 @@ export const StreetLevelImagerySelectionOverlay = ({
         source={POINTS_SOURCE_ID}
         filter={['==', ['get', 'kind'], 'camera']}
         paint={{
-          'circle-radius': 4,
+          'circle-radius': 3.5,
           'circle-color': BASE_COLOR,
+          'circle-stroke-width': 1.5,
+          'circle-stroke-color': SELECTION_COLOR,
         }}
       />
     </>

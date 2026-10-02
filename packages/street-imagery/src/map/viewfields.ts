@@ -14,8 +14,8 @@ export const VIEWFIELD_MIN_ZOOM = 16
 /** Upper bound of viewfield polygons per provider; dense areas would otherwise freeze the map. */
 export const VIEWFIELD_MAX_FEATURES = 1500
 
-/** Corners of a 360° disk; small on screen, so a coarse polygon is enough. */
-const PANO_DISK_SEGMENTS = 12
+/** Corners of a 360° disk: enough to look round at its size on screen (about 17 px radius). */
+const PANO_DISK_SEGMENTS = 32
 
 const METERS_PER_DEGREE_LAT = 111_320
 
