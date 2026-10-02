@@ -25,6 +25,8 @@
   "changesets": [
     "gentle-tidy-anchors",
     "installable-kit-packages",
+    "locale-en-de",
+    "location-openers",
     "mapillary-features-look-at",
     "registry-metadata-fix",
     "viewpoint-photo-finder"

@@ -1,6 +1,6 @@
 {
   "name": "@osm-editor-kit/street-imagery",
-  "version": "0.1.0-alpha.4",
+  "version": "0.1.0-alpha.5",
   "description": "Street-level imagery providers, GeoJSON, viewfields, tiles, and viewer helpers (Mapillary, Panoramax, and more).",
   "homepage": "https://github.com/osmberlin/street-space-editor/tree/main/packages/street-imagery",
   "license": "MIT",
