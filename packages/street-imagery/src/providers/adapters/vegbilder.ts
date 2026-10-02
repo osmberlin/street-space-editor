@@ -231,5 +231,6 @@ export const vegbilderAdapter: ProviderAdapter = {
   label: 'Vegbilder',
   color: '#EA580C',
   minZoom: 14,
+  coverage: { bbox: NORWAY_BBOX, label: 'Norway' },
   fetchPhotos,
 }

@@ -124,6 +124,11 @@ export type ProviderAdapter = {
   defaultEnabled?: boolean
   /** When set, map layers cannot load in the browser (e.g. upstream CORS). */
   browserUnavailableReason?: string
+  /**
+   * The only area the provider has imagery in, with a name for it ("Norway"). Outside it nothing
+   * is requested and hosts can show "not available here". Unset: worldwide.
+   */
+  coverage?: { bbox: Bbox; label: string }
   fetchPhotos?: (bbox: Bbox, zoom: number, signal: AbortSignal) => Promise<NormalizedPhoto[]>
   fetchSequences?: (bbox: Bbox, zoom: number, signal: AbortSignal) => Promise<NormalizedSequence[]>
   fetchMapFeatures?: (

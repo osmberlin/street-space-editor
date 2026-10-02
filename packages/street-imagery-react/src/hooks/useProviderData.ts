@@ -1,5 +1,5 @@
 import type { Bbox } from '@osm-editor-kit/street-imagery'
-import { adapterById, type ProviderId } from '@osm-editor-kit/street-imagery'
+import { adapterById, providerCoversBbox, type ProviderId } from '@osm-editor-kit/street-imagery'
 import { useQuery } from '@tanstack/react-query'
 
 const bboxKey = (bbox: Bbox | null) =>
@@ -18,6 +18,7 @@ export const useProviderPhotos = (providerId: ProviderId, bbox: Bbox | null, zoo
   const enabled =
     adapter.kind === 'photo' &&
     bbox != null &&
+    providerCoversBbox(providerId, bbox) &&
     zoom >= adapter.minZoom &&
     adapter.fetchPhotos != null
 
@@ -38,6 +39,7 @@ export const useProviderSequences = (providerId: ProviderId, bbox: Bbox | null, 
   const enabled =
     adapter.kind === 'photo' &&
     bbox != null &&
+    providerCoversBbox(providerId, bbox) &&
     zoom >= sequencesMinZoom &&
     adapter.fetchSequences != null
 
@@ -54,6 +56,7 @@ export const useProviderMapFeatures = (providerId: ProviderId, bbox: Bbox | null
   const enabled =
     adapter.kind === 'mapFeature' &&
     bbox != null &&
+    providerCoversBbox(providerId, bbox) &&
     zoom >= adapter.minZoom &&
     adapter.fetchMapFeatures != null
 

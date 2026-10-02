@@ -8,7 +8,7 @@ import { panoramaxAdapter } from './adapters/panoramax'
 import { streetsideAdapter } from './adapters/streetside'
 import { streetViewAdapter } from './adapters/streetview'
 import { vegbilderAdapter } from './adapters/vegbilder'
-import type { ProviderAdapter, ProviderId, ProviderKind } from './model'
+import type { Bbox, ProviderAdapter, ProviderId, ProviderKind } from './model'
 import { PROVIDER_IDS } from './model'
 
 export type ProviderMeta = {
@@ -20,6 +20,8 @@ export type ProviderMeta = {
   sequencesMinZoom: number
   homepageUrl?: string
   browserUnavailableReason?: string
+  /** The only area the provider has imagery in. Unset: worldwide. */
+  coverage?: { bbox: Bbox; label: string }
 }
 
 const PROVIDER_HOMEPAGE_URLS: Partial<Record<ProviderId, string>> = {
@@ -61,6 +63,7 @@ export const PROVIDERS: ProviderMeta[] = PROVIDER_ADAPTERS.map((adapter) => ({
   sequencesMinZoom: adapter.sequencesMinZoom ?? adapter.minZoom,
   homepageUrl: PROVIDER_HOMEPAGE_URLS[adapter.id],
   browserUnavailableReason: adapter.browserUnavailableReason,
+  coverage: adapter.coverage,
 }))
 
 export const DEFAULT_PROVIDER_IDS: ProviderId[] = PROVIDER_IDS.filter(
@@ -70,6 +73,19 @@ export const DEFAULT_PROVIDER_IDS: ProviderId[] = PROVIDER_IDS.filter(
 export const isClickOnlyPhotoProvider = (providerId: ProviderId): boolean => {
   const adapter = adapterById[providerId]
   return adapter.kind === 'photo' && adapter.fetchPhotos == null
+}
+
+/**
+ * Whether the provider can have imagery in the map view: `false` only for providers with a
+ * `coverage` area (Vegbilder: Norway) that the view does not touch.
+ */
+export const providerCoversBbox = (providerId: ProviderId, bbox: Bbox): boolean => {
+  const coverage = adapterById[providerId].coverage?.bbox
+  if (!coverage) {
+    return true
+  }
+  const [west, south, east, north] = bbox
+  return west <= coverage[2] && east >= coverage[0] && south <= coverage[3] && north >= coverage[1]
 }
 
 export const isBrowserAvailableProvider = (providerId: ProviderId): boolean =>
