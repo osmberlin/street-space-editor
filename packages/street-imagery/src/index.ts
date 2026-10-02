@@ -4,6 +4,7 @@ export {
   peekStreetImageryConfig,
   setStreetImageryConfig,
   type Infra3dConfig,
+  type Infra3dProject,
   type StreetImageryConfig,
 } from './config'
 export * from './data/geojson'
