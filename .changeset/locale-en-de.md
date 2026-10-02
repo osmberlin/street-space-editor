@@ -17,3 +17,5 @@
 - `PhotoDate`: month and year, with the full date and the age in the tooltip. The suggested-view chips use it.
 - `MapillaryPanel` / `StreetLevelImageryViewer`: `hideAttribution`, for hosts that show creator and link themselves; `onViewerPhoto` gives the `creatorName`.
 - Breaking: `viewSuggestionLabel(suggestion, messages)` takes the messages; `viewpointRoleLabel` is gone (use `messages.viewpointRole`).
+- **Map look**: sequence lines and photo dots are black, without white outlines; the shown photo's sequence is thicker and the rest steps back. View-direction shapes and the shown photo's cone carry the style colour (`photoCircleColor`) with a hairline edge at most. New options `viewConeColor` and `viewConeScale`.
+- Sequence lines run through their loaded photos (`alignLineToPoints` in the core package adds the missing corners).

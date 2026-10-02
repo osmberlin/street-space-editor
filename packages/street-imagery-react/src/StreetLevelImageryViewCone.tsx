@@ -1,11 +1,14 @@
 import { coneRadiusMeters, viewConeGeoJson } from '@osm-editor-kit/street-imagery'
 import type { NormalizedPhoto } from '@osm-editor-kit/street-imagery'
+import type { DataDrivenPropertyValueSpecification } from 'maplibre-gl'
 import { Layer, Source } from 'react-map-gl/maplibre'
-import { SELECTION_COLOR } from './StreetLevelImagerySelectionOverlay'
+import { BASE_COLOR } from './StreetLevelImagerySelectionOverlay'
 
 const CONE_SOURCE_ID = 'view-direction-cone'
 const CONE_FILL_LAYER_ID = 'view-direction-cone-fill'
-const CONE_LINE_LAYER_ID = 'view-direction-cone-line'
+
+/** Fill of view-direction shapes: the 360° disks, the flat wedges and the shown photo's cone. */
+export const VIEW_SHAPE_FILL_OPACITY = 0.25
 
 const INTERACTIVE_PANO_PROVIDERS = new Set([
   'mapillary',
@@ -24,12 +27,21 @@ export type StreetLevelImageryViewConeProps = {
     hfov?: number | null
     lngLat?: [number, number] | null
   } | null
+  /**
+   * Fill colour; an expression may read the photo's `isPano` and `capturedAt`, so the cone gets
+   * the same colour as the photo's own view-direction shape.
+   */
+  color?: DataDrivenPropertyValueSpecification<string>
+  /** Cone length as a multiple of the per-photo view-direction shapes. Default 2.5. */
+  scale?: number
 }
 
 export const StreetLevelImageryViewCone = ({
   selectedPhoto,
   zoom,
   viewerPov,
+  color = BASE_COLOR,
+  scale = 2.5,
 }: StreetLevelImageryViewConeProps) => {
   const apex = viewerPov?.lngLat ?? selectedPhoto.lngLat
   const isPano = selectedPhoto.isPano === true
@@ -54,7 +66,10 @@ export const StreetLevelImageryViewCone = ({
   }
 
   // Larger than the per-photo viewfields, so the shown photo's direction stands out.
-  const coneFeature = viewConeGeoJson(apex, bearing, fov, coneRadiusMeters(zoom) * 2.5)
+  const coneFeature = {
+    ...viewConeGeoJson(apex, bearing, fov, coneRadiusMeters(zoom) * scale),
+    properties: { isPano: selectedPhoto.isPano, capturedAt: selectedPhoto.capturedAt },
+  }
 
   return (
     <>
@@ -64,18 +79,9 @@ export const StreetLevelImageryViewCone = ({
         type="fill"
         source={CONE_SOURCE_ID}
         paint={{
-          'fill-color': SELECTION_COLOR,
-          'fill-opacity': 0.25,
-        }}
-      />
-      <Layer
-        id={CONE_LINE_LAYER_ID}
-        type="line"
-        source={CONE_SOURCE_ID}
-        paint={{
-          'line-color': SELECTION_COLOR,
-          'line-width': 0.75,
-          'line-opacity': 0.5,
+          'fill-color': color,
+          'fill-opacity': VIEW_SHAPE_FILL_OPACITY,
+          'fill-outline-color': 'rgba(0, 0, 0, 0)',
         }}
       />
     </>

@@ -22,6 +22,7 @@ export {
   type DateRange,
   type PhotoTypeFilter,
 } from './filters/searchFilters'
+export { alignLineToPoints } from './map/alignLine'
 export { coneRadiusMeters, viewConeGeoJson } from './map/viewCone'
 export {
   emptyPolygonCollection,

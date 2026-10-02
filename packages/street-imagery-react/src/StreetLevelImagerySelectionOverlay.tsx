@@ -1,4 +1,5 @@
 import {
+  alignLineToPoints,
   distanceMeters,
   emptyLineCollection,
   sequencesToFeatureCollection,
@@ -11,79 +12,17 @@ const POINTS_SOURCE_ID = 'selection-highlight'
 const CONNECTOR_SOURCE_ID = 'selection-connector'
 const SEQUENCE_HIGHLIGHT_SOURCE_ID = 'sequence-highlight'
 
-/** Accent of the photo that is shown in the viewer: its sequence, marker and view cone. */
-export const SELECTION_COLOR = '#f97316'
+/** Lines and photo dots: near black. The shown photo's line is thicker, its marker larger. */
+export const BASE_COLOR = '#171717'
+
+/** @deprecated Same as `BASE_COLOR`; the shown photo no longer has a colour of its own. */
+export const SELECTION_COLOR = BASE_COLOR
 
 /** Below this distance the photo dot and the viewer's camera position count as the same spot. */
 const SAME_POSITION_METERS = 0.75
 
-/**
- * Sequence lines come simplified from the vector tiles, so they pass near the photo, not through
- * it. Within this distance the nearest corner of the line is moved onto a photo of the line.
- */
-const SNAP_LINE_METERS = 6
-
-/**
- * Move the corners of the lines onto the points near them (within reach). Each corner moves at
- * most once and each point gets at most one corner; the closest pairs are joined first.
- */
-const snapCornersToPoints = (
-  collection: FeatureCollection<LineString | MultiLineString>,
-  points: readonly [number, number][],
-): FeatureCollection<LineString | MultiLineString> => {
-  if (points.length === 0 || collection.features.length === 0) {
-    return collection
-  }
-  const features = collection.features.map((feature) => ({
-    ...feature,
-    geometry:
-      feature.geometry.type === 'LineString'
-        ? { ...feature.geometry, coordinates: feature.geometry.coordinates.map((c) => [...c]) }
-        : {
-            ...feature.geometry,
-            coordinates: feature.geometry.coordinates.map((line) => line.map((c) => [...c])),
-          },
-  }))
-  const corners = features.flatMap((feature) =>
-    feature.geometry.type === 'LineString'
-      ? feature.geometry.coordinates
-      : feature.geometry.coordinates.flat(),
-  )
-  // All pairs within reach, closest first, so each point gets its own corner and no corner is
-  // pulled away from a nearer point.
-  const pairs: { point: readonly [number, number]; corner: number[]; distance: number }[] = []
-  for (const point of points) {
-    for (const corner of corners) {
-      const [lng, lat] = corner
-      // Cheap reject before the exact distance (0.0001° is about 7 to 11 m).
-      if (
-        lng == null ||
-        lat == null ||
-        Math.abs(lng - point[0]) > 0.0001 ||
-        Math.abs(lat - point[1]) > 0.0001
-      ) {
-        continue
-      }
-      const distance = distanceMeters([lng, lat], [point[0], point[1]])
-      if (distance <= SNAP_LINE_METERS) {
-        pairs.push({ point, corner, distance })
-      }
-    }
-  }
-  pairs.sort((a, b) => a.distance - b.distance)
-  const movedCorners = new Set<number[]>()
-  const placedPoints = new Set<readonly [number, number]>()
-  for (const { point, corner } of pairs) {
-    if (movedCorners.has(corner) || placedPoints.has(point)) {
-      continue
-    }
-    corner[0] = point[0]
-    corner[1] = point[1]
-    movedCorners.add(corner)
-    placedPoints.add(point)
-  }
-  return { ...collection, features }
-}
+/** Width of the shown photo's sequence line; other lines are 2. */
+export const ACTIVE_LINE_WIDTH = 3.5
 
 export type StreetLevelImagerySelectionOverlayProps = {
   selectedPhoto?: NormalizedPhoto | null
@@ -93,25 +32,19 @@ export type StreetLevelImagerySelectionOverlayProps = {
    * starts at). When it differs from the photo dot, a pin marks it and a line connects both.
    */
   cameraLngLat?: [number, number] | null
-  /**
-   * Positions of the sequence's photo dots on the map. The line's corners move onto them, so the
-   * line runs through its dots.
-   */
-  sequencePhotoLngLats?: readonly [number, number][]
   /** Layer to draw the sequence line below, so photo dots stay on top of it. */
   sequenceBeforeId?: string
 }
 
 /**
- * The shown photo on the map, bottom to top: its sequence (thin line with a white casing, below
- * the photo dots), a filled marker on its photo dot, and — when the camera position differs from the
+ * The shown photo on the map, bottom to top: its sequence line (only passed when the provider's
+ * own layers are off; else that layer marks it), a filled marker on its photo dot, and — when the camera position differs from the
  * dot — a dashed connector and a pin at the camera position.
  */
 export const StreetLevelImagerySelectionOverlay = ({
   selectedPhoto,
   selectedSequence,
   cameraLngLat,
-  sequencePhotoLngLats,
   sequenceBeforeId,
 }: StreetLevelImagerySelectionOverlayProps) => {
   const photoLngLat = selectedPhoto?.lngLat
@@ -126,10 +59,18 @@ export const StreetLevelImagerySelectionOverlay = ({
   const sequenceLines: FeatureCollection<LineString | MultiLineString> = selectedSequence
     ? sequencesToFeatureCollection([selectedSequence])
     : emptyLineCollection()
-  const sequenceCollection = snapCornersToPoints(sequenceLines, [
-    ...(dot ? [dot] : []),
-    ...(sequencePhotoLngLats ?? []),
-  ])
+  const throughDot = (line: number[][]) =>
+    dot ? alignLineToPoints(line as [number, number][], [dot]) : line
+  const sequenceCollection: FeatureCollection<LineString | MultiLineString> = {
+    ...sequenceLines,
+    features: sequenceLines.features.map((feature) => ({
+      ...feature,
+      geometry:
+        feature.geometry.type === 'LineString'
+          ? { ...feature.geometry, coordinates: throughDot(feature.geometry.coordinates) }
+          : { ...feature.geometry, coordinates: feature.geometry.coordinates.map(throughDot) },
+    })),
+  }
 
   if (!selectedPhoto && sequenceCollection.features.length === 0) {
     return null
@@ -177,19 +118,11 @@ export const StreetLevelImagerySelectionOverlay = ({
       <Source id={SEQUENCE_HIGHLIGHT_SOURCE_ID} type="geojson" data={sequenceCollection} />
       <Layer
         beforeId={sequenceBeforeId}
-        id="sequence-highlight-casing"
-        type="line"
-        source={SEQUENCE_HIGHLIGHT_SOURCE_ID}
-        layout={{ 'line-cap': 'round', 'line-join': 'round' }}
-        paint={{ 'line-color': '#ffffff', 'line-width': 5, 'line-opacity': 0.9 }}
-      />
-      <Layer
-        beforeId={sequenceBeforeId}
         id="sequence-highlight-layer"
         type="line"
         source={SEQUENCE_HIGHLIGHT_SOURCE_ID}
         layout={{ 'line-cap': 'round', 'line-join': 'round' }}
-        paint={{ 'line-color': SELECTION_COLOR, 'line-width': 2.5 }}
+        paint={{ 'line-color': BASE_COLOR, 'line-width': ACTIVE_LINE_WIDTH }}
       />
 
       <Source id={CONNECTOR_SOURCE_ID} type="geojson" data={connector} />
@@ -197,7 +130,7 @@ export const StreetLevelImagerySelectionOverlay = ({
         id="selection-connector-layer"
         type="line"
         source={CONNECTOR_SOURCE_ID}
-        paint={{ 'line-color': SELECTION_COLOR, 'line-width': 1.5, 'line-dasharray': [2, 1.5] }}
+        paint={{ 'line-color': BASE_COLOR, 'line-width': 1.5, 'line-dasharray': [2, 1.5] }}
       />
 
       <Source id={POINTS_SOURCE_ID} type="geojson" data={points} />
@@ -208,10 +141,8 @@ export const StreetLevelImagerySelectionOverlay = ({
         source={POINTS_SOURCE_ID}
         filter={['==', ['get', 'kind'], 'dot']}
         paint={{
-          'circle-radius': 6,
-          'circle-color': SELECTION_COLOR,
-          'circle-stroke-width': 1.5,
-          'circle-stroke-color': '#ffffff',
+          'circle-radius': 7,
+          'circle-color': BASE_COLOR,
         }}
       />
       <Layer
@@ -220,10 +151,8 @@ export const StreetLevelImagerySelectionOverlay = ({
         source={POINTS_SOURCE_ID}
         filter={['==', ['get', 'kind'], 'camera']}
         paint={{
-          'circle-radius': 5,
-          'circle-color': SELECTION_COLOR,
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#ffffff',
+          'circle-radius': 4,
+          'circle-color': BASE_COLOR,
         }}
       />
     </>

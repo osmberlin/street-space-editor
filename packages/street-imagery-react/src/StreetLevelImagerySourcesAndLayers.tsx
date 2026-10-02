@@ -1,5 +1,6 @@
 import { setStreetImageryConfig, type StreetImageryConfig } from '@osm-editor-kit/street-imagery'
 import {
+  alignLineToPoints,
   emptyLineCollection,
   emptyPointCollection,
   emptyPolygonCollection,
@@ -39,11 +40,12 @@ import {
   useProviderSequences,
 } from './hooks/useProviderData'
 import {
+  ACTIVE_LINE_WIDTH,
+  BASE_COLOR,
   resolveSelectedSequence,
-  SELECTION_COLOR,
   StreetLevelImagerySelectionOverlay,
 } from './StreetLevelImagerySelectionOverlay'
-import { StreetLevelImageryViewCone } from './StreetLevelImageryViewCone'
+import { StreetLevelImageryViewCone, VIEW_SHAPE_FILL_OPACITY } from './StreetLevelImageryViewCone'
 
 export type PhotoFilter = {
   photoTypes?: PhotoTypeFilter[]
@@ -64,8 +66,10 @@ type ProviderLayerProps = {
   showViewfields: boolean
   photoCircleColor: DataDrivenPropertyValueSpecification<string>
   mapFeatureCircleColor: DataDrivenPropertyValueSpecification<string>
-  /** Sequence of the shown photo: its photos get the selection color as outline. */
+  /** Sequence of the shown photo: its line is thicker. */
   activeSequenceId?: string | null
+  /** A photo is shown (of any provider): everything but its sequence is muted. */
+  hasActiveSequence: boolean
 }
 
 const CIRCLE_RADIUS: ['interpolate', ['linear'], ['zoom'], ...number[]] = [
@@ -114,6 +118,7 @@ const PhotoProviderLayer = ({
   showViewfields,
   photoCircleColor,
   activeSequenceId,
+  hasActiveSequence,
 }: ProviderLayerProps) => {
   const adapter = adapterById[providerId]
   const { data: photos = [] } = useProviderPhotos(providerId, bbox, zoom)
@@ -146,6 +151,13 @@ const PhotoProviderLayer = ({
     '==',
     ['get', 'sequenceId'],
     activeSequenceId ?? '',
+  ]
+  // Lines and dots: black; the shown photo's sequence stands out, the rest steps back.
+  const lineAndDotOpacity: ExpressionSpecification = [
+    'case',
+    inActiveSequence,
+    1,
+    hasActiveSequence ? 0.3 : 0.7,
   ]
   const photoFilter = buildPhotoLayerFilter(filter?.photoTypes, filter?.date)
   const photoSrcId = photoSourceId(providerId)
@@ -183,9 +195,41 @@ const PhotoProviderLayer = ({
           })
       : []
 
+  // Tile lines are simplified and pass beside their photos; run them through the loaded photos.
+  const photoLngLatsBySequence = new Map<string, [number, number][]>()
+  for (const photo of photos) {
+    if (photo.sequenceId == null) continue
+    const list = photoLngLatsBySequence.get(photo.sequenceId)
+    if (list) {
+      list.push(photo.lngLat)
+    } else {
+      photoLngLatsBySequence.set(photo.sequenceId, [photo.lngLat])
+    }
+  }
+  const alignedSequences = filteredSequences.map((sequence) => {
+    const points = photoLngLatsBySequence.get(sequence.sequenceId)
+    if (!points) return sequence
+    const { geometry } = sequence
+    return {
+      ...sequence,
+      geometry:
+        geometry.type === 'LineString'
+          ? {
+              ...geometry,
+              coordinates: alignLineToPoints(geometry.coordinates as [number, number][], points),
+            }
+          : {
+              ...geometry,
+              coordinates: geometry.coordinates.map((line) =>
+                alignLineToPoints(line as [number, number][], points),
+              ),
+            },
+    }
+  })
+
   const sequenceCollection =
-    filteredSequences.length > 0
-      ? sequencesToFeatureCollection(filteredSequences)
+    alignedSequences.length > 0
+      ? sequencesToFeatureCollection(alignedSequences)
       : emptyLineCollection()
 
   return (
@@ -202,10 +246,15 @@ const PhotoProviderLayer = ({
             id={sequenceLayerId(providerId)}
             type="line"
             source={sequenceSourceId(providerId)}
+            layout={{
+              'line-cap': 'round',
+              'line-join': 'round',
+              'line-sort-key': ['case', inActiveSequence, 1, 0],
+            }}
             paint={{
-              'line-color': adapter.color,
-              'line-width': 2,
-              'line-opacity': 0.35,
+              'line-color': BASE_COLOR,
+              'line-width': ['case', inActiveSequence, ACTIVE_LINE_WIDTH, 2],
+              'line-opacity': lineAndDotOpacity,
             }}
           />
         </>
@@ -225,17 +274,19 @@ const PhotoProviderLayer = ({
             source={viewfieldSrcId}
             paint={{
               'fill-color': photoCircleColor,
-              'fill-opacity': 0.22,
+              'fill-opacity': VIEW_SHAPE_FILL_OPACITY,
+              'fill-outline-color': 'rgba(0, 0, 0, 0)',
             }}
           />
+          {/* A hairline, just enough to give overlapping shapes an edge. */}
           <Layer
             id={viewfieldLineLayerId(providerId)}
             type="line"
             source={viewfieldSrcId}
             paint={{
               'line-color': photoCircleColor,
-              'line-width': 1,
-              'line-opacity': 0.45,
+              'line-width': 0.5,
+              'line-opacity': 0.3,
             }}
           />
         </>
@@ -256,9 +307,8 @@ const PhotoProviderLayer = ({
         layout={{ 'circle-sort-key': PHOTO_SORT_KEY }}
         paint={{
           'circle-radius': CIRCLE_RADIUS,
-          'circle-color': photoCircleColor,
-          'circle-stroke-width': ['case', inActiveSequence, 2, 1],
-          'circle-stroke-color': ['case', inActiveSequence, SELECTION_COLOR, '#ffffff'],
+          'circle-color': BASE_COLOR,
+          'circle-opacity': lineAndDotOpacity,
         }}
       />
     </>
@@ -304,8 +354,6 @@ const MapFeatureProviderLayer = ({
         paint={{
           'circle-radius': FEATURE_CIRCLE_RADIUS,
           'circle-color': mapFeatureCircleColor,
-          'circle-stroke-width': 1,
-          'circle-stroke-color': '#ffffff',
         }}
       />
     </>
@@ -340,7 +388,15 @@ export type StreetLevelImagerySourcesAndLayersProps = {
       hfov?: number | null
       lngLat?: [number, number] | null
     } | null
+    /**
+     * Style colour of a photo (by type, age …). It colours the view-direction shapes and the
+     * shown photo's cone; photo dots and sequence lines are black.
+     */
     photoCircleColor: DataDrivenPropertyValueSpecification<string>
+    /** Colour of the shown photo's view cone. Default: `photoCircleColor`. */
+    viewConeColor?: DataDrivenPropertyValueSpecification<string>
+    /** Length of the shown photo's view cone, as a multiple of the per-photo shapes. Default 2.5. */
+    viewConeScale?: number
     mapFeatureCircleColor: DataDrivenPropertyValueSpecification<string>
   }
 }
@@ -361,6 +417,8 @@ export const StreetLevelImagerySourcesAndLayers = ({
     selectedPhoto,
     selectedSequenceId,
     viewerPov,
+    viewConeColor,
+    viewConeScale,
     photoCircleColor,
     mapFeatureCircleColor,
   } = options
@@ -383,17 +441,10 @@ export const StreetLevelImagerySourcesAndLayers = ({
 
   const activeSequenceId = selectedSequenceId ?? selectedPhoto?.sequenceId
   const selectedSequence = resolveSelectedSequence(selectedPhoto, sequences, activeSequenceId)
-  // Same query as the provider's photo layer, so this costs no extra request.
-  const { data: selectedProviderPhotos = [] } = useProviderPhotos(
-    selectedProviderId ?? 'mapillary',
-    showSelectionHighlight && selectedProviderId ? bbox : null,
-    zoom,
-  )
-  const sequencePhotoLngLats = activeSequenceId
-    ? selectedProviderPhotos
-        .filter((photo) => photo.sequenceId === activeSequenceId)
-        .map((photo) => photo.lngLat)
-    : []
+  // The provider's own sequence layer marks the shown sequence. Without that layer (provider
+  // off, sequences off) the overlay draws the line.
+  const providerDrawsSequences =
+    selectedProviderId != null && showSequences && providers.includes(selectedProviderId)
 
   // The shown photo's sequence goes below the lowest photo layer, so dots stay on top of it.
   const firstPhotoProvider = providers.find(
@@ -414,6 +465,7 @@ export const StreetLevelImagerySourcesAndLayers = ({
             filter={filter}
             mapFeatureCircleColor={mapFeatureCircleColor}
             activeSequenceId={providerId === selectedProviderId ? activeSequenceId : null}
+            hasActiveSequence={activeSequenceId != null}
             photoCircleColor={photoCircleColor}
             providerId={providerId}
             showSequences={showSequences}
@@ -425,6 +477,8 @@ export const StreetLevelImagerySourcesAndLayers = ({
 
       {showViewCone && selectedPhoto ? (
         <StreetLevelImageryViewCone
+          color={viewConeColor ?? photoCircleColor}
+          scale={viewConeScale}
           selectedPhoto={selectedPhoto}
           viewerPov={viewerPov}
           zoom={zoom}
@@ -435,8 +489,7 @@ export const StreetLevelImagerySourcesAndLayers = ({
         <StreetLevelImagerySelectionOverlay
           cameraLngLat={viewerPov?.lngLat}
           selectedPhoto={selectedPhoto}
-          selectedSequence={selectedSequence}
-          sequencePhotoLngLats={sequencePhotoLngLats}
+          selectedSequence={providerDrawsSequences ? null : selectedSequence}
           sequenceBeforeId={sequenceBeforeId}
         />
       ) : null}
