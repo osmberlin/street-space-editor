@@ -108,7 +108,8 @@ const SuggestionChip = ({
     : -1
   const shown = shownIndex >= 0 ? candidates[shownIndex] : best
   const canStep = active && candidates.length > 1
-  const hasCount = canStep && shownIndex >= 0
+  // Like the day buttons of a map feature: every view shows how many photos it has.
+  const hasCount = candidates.length > 0
   const name = viewSuggestionLabel(suggestion, messages)
   const label = canStep ? messages.viewer.nextPhotoOfView(name) : name
   return (
@@ -153,11 +154,11 @@ const SuggestionChip = ({
             {messages.compass[Math.round(suggestion.direction.bearing / 45) % 8]}
           </span>
         </span>
-        {/* Only the active view counts: a click on it shows its next photo. */}
+        {/* The active view also shows which of its photos is up: a click shows the next one. */}
         {hasCount ? (
           <PhotoCount
-            className="font-normal text-fuchsia-100"
-            index={shownIndex + 1}
+            className={`font-normal ${active ? 'text-fuchsia-100' : 'text-slate-500'}`}
+            index={shownIndex >= 0 ? shownIndex + 1 : undefined}
             total={candidates.length}
           />
         ) : null}
