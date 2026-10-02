@@ -20,6 +20,7 @@ export type StreetImageryMessages = {
     suggestedViewsHint: string
     noPhoto: (label: string) => string
     noMatchingPhoto: (label: string) => string
+    nextPhotoOfView: (label: string) => string
   }
   viewpointRole: Record<ViewpointRole, string>
   unknownDate: string
@@ -39,6 +40,7 @@ const en: StreetImageryMessages = {
     suggestedViewsHint: 'Suggested views: where the photo is taken from, and which way it looks',
     noPhoto: (label) => `${label} (no photo)`,
     noMatchingPhoto: (label) => `${label}: no matching photo`,
+    nextPhotoOfView: (label) => `${label} — click for the next photo`,
   },
   unknownDate: 'Unknown date',
   viewpointRole: {
@@ -81,6 +83,7 @@ const de: StreetImageryMessages = {
       'Vorgeschlagene Blicke: von wo das Foto aufgenommen ist und wohin es schaut',
     noPhoto: (label) => `${label} (kein Foto)`,
     noMatchingPhoto: (label) => `${label}: kein passendes Foto`,
+    nextPhotoOfView: (label) => `${label} — klicken für das nächste Foto`,
   },
   unknownDate: 'Datum unbekannt',
   viewpointRole: {

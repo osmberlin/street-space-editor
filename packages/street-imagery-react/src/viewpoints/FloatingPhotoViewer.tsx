@@ -1,4 +1,4 @@
-import type { ViewSuggestion } from '@osm-editor-kit/street-imagery'
+import type { PhotoCandidate, ViewSuggestion } from '@osm-editor-kit/street-imagery'
 import {
   useEffect,
   useEffectEvent,
@@ -87,15 +87,25 @@ const ToolbarButton = ({
 const SuggestionChip = ({
   suggestion,
   active,
+  shownPhotoId,
   onSelect,
 }: {
   suggestion: ViewSuggestion
   active: boolean
-  onSelect: () => void
+  shownPhotoId: string | null | undefined
+  onSelect: (candidate: PhotoCandidate) => void
 }) => {
   const { messages } = useStreetImageryI18n()
-  const best = suggestion.candidates[0]
-  const label = viewSuggestionLabel(suggestion, messages)
+  const { candidates } = suggestion
+  const best = candidates[0]
+  // The active view counts through its photos, best match first: "2/5".
+  const shownIndex = active
+    ? candidates.findIndex((candidate) => candidate.photo.photoId === shownPhotoId)
+    : -1
+  const shown = shownIndex >= 0 ? candidates[shownIndex] : best
+  const canStep = active && candidates.length > 1
+  const name = viewSuggestionLabel(suggestion, messages)
+  const label = canStep ? messages.viewer.nextPhotoOfView(name) : name
   return (
     <button
       aria-label={best ? label : messages.viewer.noPhoto(label)}
@@ -109,7 +119,13 @@ const SuggestionChip = ({
             : 'border-dashed border-slate-200 bg-white text-slate-400',
       ].join(' ')}
       disabled={!best}
-      onClick={onSelect}
+      onClick={() => {
+        // The active view again: its next photo. Another view: its best photo.
+        const next = canStep ? candidates[(shownIndex + 1) % candidates.length] : best
+        if (next) {
+          onSelect(next)
+        }
+      }}
       title={best ? label : messages.viewer.noMatchingPhoto(label)}
       type="button"
     >
@@ -125,11 +141,16 @@ const SuggestionChip = ({
           <Icon className="size-3" path={ICONS.arrow} />
         </span>
       </span>
-      {best ? (
-        <PhotoDate
-          className={`max-w-full truncate ${active ? 'text-fuchsia-100' : 'text-slate-400'}`}
-          timestamp={best.photo.capturedAt}
-        />
+      {shown ? (
+        <span className={`max-w-full truncate ${active ? 'text-fuchsia-100' : 'text-slate-400'}`}>
+          <PhotoDate timestamp={shown.photo.capturedAt} />
+          {candidates.length > 1 ? (
+            <span className="ml-1 tabular-nums">
+              {shownIndex >= 0 ? `${shownIndex + 1}/` : ''}
+              {candidates.length}
+            </span>
+          ) : null}
+        </span>
       ) : (
         <span className="text-slate-400">—</span>
       )}
@@ -157,7 +178,13 @@ export type FloatingPhotoViewerProps = {
   /** Suggested views (viewpoint × direction); shown as chips. Empty hides the strip. */
   suggestions: ViewSuggestion[]
   activeDirectionKey: string | null
-  onSelectSuggestion: (suggestion: ViewSuggestion) => void
+  /**
+   * A view button was clicked. `candidate` is the photo to show: the view's best one, or the next
+   * one when the active view is clicked again.
+   */
+  onSelectSuggestion: (suggestion: ViewSuggestion, candidate: PhotoCandidate) => void
+  /** The photo in the viewer, so the active view can show which of its photos that is. */
+  shownPhotoId?: string | null
   canGoBack: boolean
   canGoForward: boolean
   onBack: () => void
@@ -200,6 +227,7 @@ export const FloatingPhotoViewer = ({
   suggestions,
   activeDirectionKey,
   onSelectSuggestion,
+  shownPhotoId,
   canGoBack,
   canGoForward,
   onBack,
@@ -379,7 +407,8 @@ export const FloatingPhotoViewer = ({
             <SuggestionChip
               active={suggestion.direction.key === activeDirectionKey}
               key={suggestion.direction.key}
-              onSelect={() => onSelectSuggestion(suggestion)}
+              onSelect={(candidate) => onSelectSuggestion(suggestion, candidate)}
+              shownPhotoId={shownPhotoId}
               suggestion={suggestion}
             />
           ))}
