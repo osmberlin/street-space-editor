@@ -1,5 +1,5 @@
 import type { Bbox, NormalizedPhoto, ProviderAdapter, TileCoord } from '../model'
-import { collectSettledTiles, fetchTileCached, getTileCacheKey } from '../tileCache'
+import { fetchTileCached, getTileCacheKey } from '../tileCache'
 import { tileBbox, tilesForBbox } from '../tileMath'
 
 const API_URL = 'https://kartaview.org/1.0/list/nearby-photos/'
@@ -185,12 +185,30 @@ const fetchKartaviewTile = async (tile: TileCoord, signal: AbortSignal) => {
   return fetchTileCached(key, (innerSignal) => fetchKartaviewTilePhotos(tile, innerSignal), signal)
 }
 
+/**
+ * Requests in parallel make the server slow enough to time out (four at once did, one after the
+ * other answered in 2 to 10 s each; measured 2026-10-02), so tiles load two at a time.
+ */
+const CONCURRENT_REQUESTS = 2
+
 const fetchPhotos = async (bbox: Bbox, _zoom: number, signal: AbortSignal) => {
   const tiles = tilesForBbox(bbox, TILE_ZOOM, { skipNullIsland: true })
-  const tileResults = await collectSettledTiles(
-    tiles.map((tile) => fetchKartaviewTile(tile, signal)),
-  )
-  return tileResults.flat()
+  const photos: NormalizedPhoto[] = []
+  let next = 0
+  const worker = async () => {
+    while (next < tiles.length && !signal.aborted) {
+      const tile = tiles[next]
+      next += 1
+      if (!tile) continue
+      try {
+        photos.push(...(await fetchKartaviewTile(tile, signal)))
+      } catch {
+        // A tile that failed twice is skipped; it is not cached, so the next view retries it.
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: CONCURRENT_REQUESTS }, worker))
+  return photos
 }
 
 export const kartaviewAdapter: ProviderAdapter = {
