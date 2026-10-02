@@ -24,8 +24,8 @@ const SAME_POSITION_METERS = 0.75
 const SNAP_LINE_METERS = 6
 
 /**
- * Move, for each point, the nearest corner of the lines onto it (when within reach). Each corner
- * moves once; earlier points win.
+ * Move the corners of the lines onto the points near them (within reach). Each corner moves at
+ * most once and each point gets at most one corner; the closest pairs are joined first.
  */
 const snapCornersToPoints = (
   collection: FeatureCollection<LineString | MultiLineString>,
@@ -49,28 +49,38 @@ const snapCornersToPoints = (
       ? feature.geometry.coordinates
       : feature.geometry.coordinates.flat(),
   )
-  const moved = new Set<number[]>()
+  // All pairs within reach, closest first, so each point gets its own corner and no corner is
+  // pulled away from a nearer point.
+  const pairs: { point: readonly [number, number]; corner: number[]; distance: number }[] = []
   for (const point of points) {
-    let best: { corner: number[]; distance: number } | null = null
     for (const corner of corners) {
       const [lng, lat] = corner
-      if (lng == null || lat == null || moved.has(corner)) {
-        continue
-      }
       // Cheap reject before the exact distance (0.0001° is about 7 to 11 m).
-      if (Math.abs(lng - point[0]) > 0.0001 || Math.abs(lat - point[1]) > 0.0001) {
+      if (
+        lng == null ||
+        lat == null ||
+        Math.abs(lng - point[0]) > 0.0001 ||
+        Math.abs(lat - point[1]) > 0.0001
+      ) {
         continue
       }
-      const distance = distanceMeters([lng, lat], point)
-      if (distance <= SNAP_LINE_METERS && (!best || distance < best.distance)) {
-        best = { corner, distance }
+      const distance = distanceMeters([lng, lat], [point[0], point[1]])
+      if (distance <= SNAP_LINE_METERS) {
+        pairs.push({ point, corner, distance })
       }
     }
-    if (best) {
-      best.corner[0] = point[0]
-      best.corner[1] = point[1]
-      moved.add(best.corner)
+  }
+  pairs.sort((a, b) => a.distance - b.distance)
+  const movedCorners = new Set<number[]>()
+  const placedPoints = new Set<readonly [number, number]>()
+  for (const { point, corner } of pairs) {
+    if (movedCorners.has(corner) || placedPoints.has(point)) {
+      continue
     }
+    corner[0] = point[0]
+    corner[1] = point[1]
+    movedCorners.add(corner)
+    placedPoints.add(point)
   }
   return { ...collection, features }
 }
