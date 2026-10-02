@@ -100,7 +100,6 @@ const useViewpointSessionStore = create<ViewpointSessionStore>()((set, get) => (
   },
 }))
 
-export const useViewpointSessionId = () => useViewpointSessionStore((state) => state.sessionId)
 export const useViewpoints = () => useViewpointSessionStore((state) => state.viewpoints)
 export const useViewpointLine = () => useViewpointSessionStore((state) => state.line)
 export const useActiveDirectionKey = () =>
@@ -110,8 +109,6 @@ export const useCurrentHistoryEntry = () =>
 export const useCanGoBack = () => useViewpointSessionStore((state) => state.historyIndex > 0)
 export const useCanGoForward = () =>
   useViewpointSessionStore((state) => state.historyIndex < state.history.length - 1)
-export const useViewpointSessionActions = () => useViewpointSessionStore((state) => state.actions)
-
 /** Actions + current entry outside React (event handlers, tests). */
 export const getViewpointSession = () => {
   const { actions, history, historyIndex } = useViewpointSessionStore.getState()

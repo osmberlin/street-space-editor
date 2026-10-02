@@ -134,45 +134,4 @@ export const findGroupBySelection = (
 ): PhotoSequenceGroup | null =>
   groups.find((group) => group.providerId === providerId && group.sequenceId === sequenceId) ?? null
 
-export const findPhotoIndexInGroup = (group: PhotoSequenceGroup, photoId: string): number =>
-  group.photos.findIndex((photo) => photo.photoId === photoId)
-
 export const STREETSIDE_NEARBY_LIMIT = 15
-
-/** Nearby Streetside bubbles across all clicked groups, sorted by distance to the active photo. */
-export const collectNearbyStreetsidePhotos = (
-  groups: PhotoSequenceGroup[],
-  activePhoto: NormalizedPhoto,
-  limit = STREETSIDE_NEARBY_LIMIT,
-): NormalizedPhoto[] => {
-  const seen = new Set<string>()
-  const all: NormalizedPhoto[] = []
-
-  for (const group of groups) {
-    if (group.providerId !== 'streetside') {
-      continue
-    }
-    for (const photo of group.photos) {
-      if (seen.has(photo.photoId)) {
-        continue
-      }
-      seen.add(photo.photoId)
-      all.push(photo)
-    }
-  }
-
-  const [lng, lat] = activePhoto.lngLat
-  const byDistance = (left: NormalizedPhoto, right: NormalizedPhoto) =>
-    distanceToPhoto(left, lng, lat) - distanceToPhoto(right, lng, lat)
-
-  const nearby = [...all].sort(byDistance).slice(0, limit)
-  if (!nearby.some((photo) => photo.photoId === activePhoto.photoId)) {
-    if (nearby.length >= limit) {
-      nearby.pop()
-    }
-    nearby.push(activePhoto)
-    nearby.sort(byDistance)
-  }
-
-  return nearby
-}

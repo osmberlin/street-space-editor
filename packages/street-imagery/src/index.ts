@@ -23,6 +23,7 @@ export {
   type PhotoTypeFilter,
 } from './filters/searchFilters'
 export { alignLineToPoints } from './map/alignLine'
+export * from './map/styleColors'
 export {
   coneRadiusMeters,
   VIEW_SHAPE_FULL_SIZE_ZOOM,

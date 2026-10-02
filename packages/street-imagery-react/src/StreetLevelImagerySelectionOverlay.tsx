@@ -4,7 +4,7 @@ import {
   emptyLineCollection,
   sequencesToFeatureCollection,
 } from '@osm-editor-kit/street-imagery'
-import type { Bbox, NormalizedPhoto, NormalizedSequence } from '@osm-editor-kit/street-imagery'
+import type { NormalizedPhoto, NormalizedSequence } from '@osm-editor-kit/street-imagery'
 import type { FeatureCollection, LineString, MultiLineString, Point } from 'geojson'
 import { Layer, Source } from 'react-map-gl/maplibre'
 
@@ -180,5 +180,3 @@ export const resolveSelectedSequence = (
     ) ?? null
   )
 }
-
-export type SequenceHighlightBbox = Bbox | null

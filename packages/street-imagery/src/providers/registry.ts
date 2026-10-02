@@ -88,9 +88,3 @@ export const photoSourceId = (providerId: ProviderId) => `photos-source-${provid
 export const featureSourceId = (providerId: ProviderId) => `features-source-${providerId}`
 export const sequenceSourceId = (providerId: ProviderId) => `sequences-source-${providerId}`
 export const viewfieldSourceId = (providerId: ProviderId) => `viewfields-source-${providerId}`
-
-export const isPhotoProviderId = (providerId: ProviderId): boolean =>
-  adapterById[providerId].kind === 'photo'
-
-export const isMapFeatureProviderId = (providerId: ProviderId): boolean =>
-  adapterById[providerId].kind === 'mapFeature'

@@ -1,7 +1,5 @@
 import type { Bbox, TileCoord } from './model'
 
-const TILE_SIZE = 256
-
 export const lonToTileX = (lon: number, z: number): number =>
   Math.floor(((lon + 180) / 360) * 2 ** z)
 
@@ -72,5 +70,3 @@ export const tilesForBbox = (bbox: Bbox, z: number, options?: TilesForBboxOption
 
 export const bboxIntersects = (a: Bbox, b: Bbox): boolean =>
   a[0] <= b[2] && a[2] >= b[0] && a[1] <= b[3] && a[3] >= b[1]
-
-export const tilePixelSizeAtZoom = (zoom: number): number => TILE_SIZE * 2 ** zoom

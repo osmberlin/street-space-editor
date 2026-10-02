@@ -1,4 +1,3 @@
-import { DEFAULT_STREET_IMAGERY_LOCALE, formatMonth, type StreetImageryLocale } from '../i18n'
 import { bearingDeg, distanceMeters, type LngLat } from '../viewpoints/geometry'
 
 /**
@@ -241,26 +240,4 @@ export const cameraPitch = (rotation: readonly number[]): number => {
   // The vertical part of the viewing direction: matrix entry R33 of Rodrigues' formula.
   const up = Math.cos(angle) + (1 - Math.cos(angle)) * kz * kz
   return (Math.asin(Math.max(-1, Math.min(1, up))) * 180) / Math.PI
-}
-
-/**
- * The two lines of a capture day button: month and year ("Aug. 2026") and the age in short
- * ("vor 2 Monaten"): days below 45 days, months below 2 years, then years.
- */
-export const dayLabels = (
-  day: string,
-  now: number,
-  locale: StreetImageryLocale = DEFAULT_STREET_IMAGERY_LOCALE,
-): { month: string; age: string } => {
-  const date = new Date(`${day}T12:00:00Z`)
-  const month = formatMonth(date, locale)
-  const days = Math.max(0, Math.round((now - date.getTime()) / 86_400_000))
-  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'narrow' })
-  const age =
-    days < 45
-      ? formatter.format(-days, 'day')
-      : days < 730
-        ? formatter.format(-Math.round(days / 30.44), 'month')
-        : formatter.format(-Math.round(days / 365.25), 'year')
-  return { month, age }
 }

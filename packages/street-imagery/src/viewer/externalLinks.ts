@@ -1,6 +1,6 @@
 import { getStreetImageryConfig } from '../config'
 import { lookAroundDeepLink } from '../providers/adapters/lookaround'
-import type { NormalizedMapFeature, NormalizedPhoto, ProviderId } from '../providers/model'
+import type { NormalizedPhoto, ProviderId } from '../providers/model'
 
 export const providerExternalLink = (photo: NormalizedPhoto): string => {
   const [lng, lat] = photo.lngLat
@@ -32,11 +32,6 @@ export const providerExternalLink = (photo: NormalizedPhoto): string => {
     default:
       return '#'
   }
-}
-
-export const mapFeatureExternalLink = (feature: NormalizedMapFeature): string => {
-  const [lng, lat] = feature.lngLat
-  return `https://www.mapillary.com/app/?lat=${lat}&lng=${lng}&z=17&focus=map`
 }
 
 /** Deep link to a provider's viewer at a map location (no specific photo selected). */
