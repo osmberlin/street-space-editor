@@ -1,5 +1,50 @@
 # @osm-editor-kit/street-imagery-react
 
+## 0.1.0-alpha.7
+
+### Patch Changes
+
+- ee6e8cb: KartaView loads again: photos come in small tiles (about 150 m) from zoom 18. The server times out on the larger areas the adapter asked for before. A failed tile is retried once and no longer cached as empty. `maxPageAtZoom` is gone.
+
+  Providers can state a `coverage` area (`{ bbox, label }`); Vegbilder has Norway. `providerCoversBbox(providerId, bbox)` tells whether a map view can have imagery, and the data hooks request nothing outside it.
+
+  `createStreetImageryConfig({ openLinksIn: 'window' })` opens links to other services in a separate window instead of a tab; `openExternalUrl(url)` does the same for the host's own links.
+
+  Providers can have `coverageTiles`: ready-made image tiles of their tracks, drawn below the photos. KartaView uses the track tiles of its own website from zoom 12, so coverage shows before single photos load at zoom 18.
+
+- b756bdc: **Breaking: providers are registered, and bundled only when registered.**
+
+  ### @osm-editor-kit/street-imagery
+
+  - Each provider's fetching code is its own entry: `@osm-editor-kit/street-imagery/providers/mapillary`, `/mapillary-signs`, `/mapillary-map-features`, `/panoramax`, `/kartaview`, `/mapilio`, `/streetside`, `/vegbilder`, and `/providers/all` (`ALL_PROVIDER_ADAPTERS`).
+  - Call `registerProviderAdapters([...])` once at boot. `adapterById` holds only the registered adapters; a provider without one shows no map data.
+  - `PROVIDERS` / `providerById` are static and complete without any adapter. `ProviderAdapter` now has only `id` and the fetch functions; names, colours, zoom limits, `coverage`, `coverageTiles`, `clickOnly` are in `ProviderMeta`. `PROVIDER_ADAPTERS`, `streetViewAdapter` and `lookaroundAdapter` are gone.
+  - Sizes of the package's code in an app (minified, with its vector-tile dependencies): "open in …" links only 16 kB, Mapillary and Panoramax 27 kB, all providers 36 kB. Before, every app got 35 kB.
+
+  ### @osm-editor-kit/street-imagery-react
+
+  - `"sideEffects": false`, so bundlers drop the components an app does not use.
+  - The texts of `MapillaryFeatureBar` moved out of the package-wide messages into `MAPILLARY_FEATURE_BAR_LABELS` (override with the `labels` prop), so the German sign names are bundled only with the feature bar. `messages.feature` is gone.
+
+- 6e7ccff: **Street views: view buttons that count and step through their photos.**
+
+  ### @osm-editor-kit/street-imagery
+
+  - A viewpoint with role `here` and a bearing (a click on a street) looks four ways: `forward`, `right`, `back`, `left` (`ViewDirectionKind` has `right` and `left` now).
+  - `mapillaryTilePhotoSource` (entry `/providers/mapillary`): a `ViewpointPhotoSource` that picks from the photos shown on the map. The Graph API radius search returns at most 50 images and missed nearby photos in dense areas.
+
+  ### @osm-editor-kit/street-imagery-react
+
+  - `FloatingPhotoViewer`: the view buttons have two lines (arrow, compass point and photo count; date of the shown photo) and no "Views" label. A click on the active button shows the view's next photo. `onSelectSuggestion(suggestion, candidate)` gets the photo to show; pass `shownPhotoId`.
+  - `messages.compass` (eight points) replaces the direction names on the buttons; `messages.viewer.views` is gone, `messages.viewer.nextPhotoOfView` is new.
+  - `PhotoCount`: picture icon with `index/total`, used by the view buttons and the day buttons of `MapillaryFeatureBar`.
+  - Session store: showing the photo that is already up with another direction turns it (360° photos shared by several views) without a new history step. `reset` ends the session and clears back/forward.
+
+- Updated dependencies [ee6e8cb]
+- Updated dependencies [b756bdc]
+- Updated dependencies [6e7ccff]
+  - @osm-editor-kit/street-imagery@0.1.0-alpha.6
+
 ## 0.1.0-alpha.6
 
 ### Patch Changes

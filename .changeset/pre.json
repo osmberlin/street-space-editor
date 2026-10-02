@@ -25,10 +25,13 @@
   "changesets": [
     "gentle-tidy-anchors",
     "installable-kit-packages",
+    "kartaview-small-tiles",
     "locale-en-de",
     "location-openers",
     "mapillary-features-look-at",
+    "providers-per-entry",
     "registry-metadata-fix",
+    "street-views-buttons",
     "viewpoint-photo-finder"
   ]
 }
