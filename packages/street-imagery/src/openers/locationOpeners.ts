@@ -193,10 +193,30 @@ export const findLocationOpener = (id: LocationOpenerId): LocationOpener | undef
   getLocationOpeners().find((opener) => opener.id === id)
 
 /**
- * Open the place in a new tab. Call it directly in the click handler: the tab is opened before
+ * Open the place in a new tab (or window, see `openExternalUrl`). Call it directly in the click handler: the tab is opened before
  * the look-at request, else popup blockers stop it. Falls back to `locationUrl` when there is no
  * image to look from, the request fails, or it takes longer than `timeoutMs`.
  */
+/** Size of the separate window for `openLinksIn: 'window'`; browsers keep it on screen. */
+const NEW_WINDOW_FEATURES = 'popup,width=1280,height=860'
+
+/** `window.open` features for the configured `openLinksIn` (tab by default). */
+const windowFeatures = (noopener: boolean): string | undefined => {
+  const asWindow = peekStreetImageryConfig()?.openLinksIn === 'window'
+  const features = [noopener ? 'noopener' : null, asWindow ? NEW_WINDOW_FEATURES : null].filter(
+    Boolean,
+  )
+  return features.length > 0 ? features.join(',') : undefined
+}
+
+/**
+ * Open a link to another service in a new tab, or in a separate window with
+ * `createStreetImageryConfig({ openLinksIn: 'window' })`. Call it in a click handler.
+ */
+export const openExternalUrl = (url: string): void => {
+  window.open(url, '_blank', windowFeatures(true))
+}
+
 export const openLocationInNewTab = (
   opener: LocationOpener,
   target: OpenTarget,
@@ -204,12 +224,12 @@ export const openLocationInNewTab = (
 ): void => {
   const fallbackUrl = opener.locationUrl(target)
   if (!opener.lookAtUrl) {
-    window.open(fallbackUrl, '_blank', 'noopener')
+    openExternalUrl(fallbackUrl)
     return
   }
 
   // `noopener` would hide the tab from us; cut the link back to this page by hand instead.
-  const tab = window.open('about:blank', '_blank')
+  const tab = window.open('about:blank', '_blank', windowFeatures(false))
   if (tab) {
     tab.opener = null
   }
@@ -227,7 +247,7 @@ export const openLocationInNewTab = (
       if (tab && !tab.closed) {
         tab.location.replace(finalUrl)
       } else if (!tab) {
-        window.open(finalUrl, '_blank', 'noopener')
+        openExternalUrl(finalUrl)
       }
     })
 }

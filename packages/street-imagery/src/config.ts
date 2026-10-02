@@ -12,6 +12,10 @@ export type StreetImageryConfig = {
    */
   bingMapsKey?: string
   /**
+   * Where links to other services open: a new browser tab (default) or a separate window.
+   */
+  openLinksIn?: 'tab' | 'window'
+  /**
    * infra3D projects for the "open in infra3D" links. Without one there is no infra3D opener.
    */
   infra3d?: Infra3dConfig
@@ -37,11 +41,13 @@ export const createStreetImageryConfig = (input: {
   panoramaxApiBase?: string
   googleMapsApiKey?: string
   bingMapsKey?: string
+  openLinksIn?: 'tab' | 'window'
   infra3d?: Infra3dConfig
 }): StreetImageryConfig => ({
   mapillaryToken: input.mapillaryToken,
   googleMapsApiKey: input.googleMapsApiKey || undefined,
   bingMapsKey: input.bingMapsKey || undefined,
+  openLinksIn: input.openLinksIn,
   infra3d: input.infra3d && input.infra3d.projects.length > 0 ? input.infra3d : undefined,
   panoramaxApiBase: (input.panoramaxApiBase ?? DEFAULT_PANORAMAX_API_BASE).replace(/\/$/, ''),
 })
