@@ -108,6 +108,7 @@ const SuggestionChip = ({
     : -1
   const shown = shownIndex >= 0 ? candidates[shownIndex] : best
   const canStep = active && candidates.length > 1
+  const hasCount = canStep && shownIndex >= 0
   const name = viewSuggestionLabel(suggestion, messages)
   const label = canStep ? messages.viewer.nextPhotoOfView(name) : name
   return (
@@ -133,22 +134,27 @@ const SuggestionChip = ({
       title={best ? label : messages.viewer.noMatchingPhoto(label)}
       type="button"
     >
-      <span className="flex max-w-full items-center gap-1 font-medium">
-        <span
-          aria-hidden
-          className="inline-flex shrink-0"
-          style={{ transform: `rotate(${suggestion.direction.bearing}deg)` }}
-        >
-          <Icon className="size-3" path={ICONS.arrow} />
-        </span>
-        <span className="truncate">
-          {showPlace
-            ? `${suggestion.viewpoint.label ?? messages.viewpointRole[suggestion.viewpoint.role]} `
-            : ''}
-          {messages.compass[Math.round(suggestion.direction.bearing / 45) % 8]}
+      {/* Direction left and count right when there is a count; else the direction centred. */}
+      <span
+        className={`flex items-center gap-1 font-medium ${hasCount ? 'w-full justify-between px-1' : 'max-w-full'}`}
+      >
+        <span className="flex min-w-0 items-center gap-1">
+          <span
+            aria-hidden
+            className="inline-flex shrink-0"
+            style={{ transform: `rotate(${suggestion.direction.bearing}deg)` }}
+          >
+            <Icon className="size-3" path={ICONS.arrow} />
+          </span>
+          <span className="truncate">
+            {showPlace
+              ? `${suggestion.viewpoint.label ?? messages.viewpointRole[suggestion.viewpoint.role]} `
+              : ''}
+            {messages.compass[Math.round(suggestion.direction.bearing / 45) % 8]}
+          </span>
         </span>
         {/* Only the active view counts: a click on it shows its next photo. */}
-        {canStep && shownIndex >= 0 ? (
+        {hasCount ? (
           <PhotoCount
             className="font-normal text-fuchsia-100"
             index={shownIndex + 1}
