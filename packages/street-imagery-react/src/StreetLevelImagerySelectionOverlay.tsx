@@ -21,8 +21,8 @@ export const SELECTION_COLOR = '#f97316'
 /** Below this distance the photo dot and the viewer's camera position count as the same spot. */
 const SAME_POSITION_METERS = 0.75
 
-/** Width of the shown photo's sequence line; other lines are 2. */
-export const ACTIVE_LINE_WIDTH = 3.5
+/** Width of the shown photo's sequence line; other lines are 1.25. */
+export const ACTIVE_LINE_WIDTH = 2.5
 
 export type StreetLevelImagerySelectionOverlayProps = {
   selectedPhoto?: NormalizedPhoto | null

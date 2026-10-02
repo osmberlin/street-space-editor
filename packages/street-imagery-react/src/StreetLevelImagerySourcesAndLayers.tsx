@@ -75,18 +75,6 @@ type ProviderLayerProps = {
   shownPhotoId?: string | null
 }
 
-const CIRCLE_RADIUS: ['interpolate', ['linear'], ['zoom'], ...number[]] = [
-  'interpolate',
-  ['linear'],
-  ['zoom'],
-  10,
-  2,
-  14,
-  4,
-  18,
-  6,
-]
-
 const FEATURE_CIRCLE_RADIUS: ['interpolate', ['linear'], ['zoom'], ...number[]] = [
   'interpolate',
   ['linear'],
@@ -162,7 +150,19 @@ const PhotoProviderLayer = ({
     'case',
     inActiveSequence,
     1,
-    hasActiveSequence ? 0.3 : 1,
+    hasActiveSequence ? 0.45 : 1,
+  ]
+  // Dots of the shown photo's sequence keep the full size; all others are smaller.
+  const dotRadius: ExpressionSpecification = [
+    'interpolate',
+    ['linear'],
+    ['zoom'],
+    10,
+    ['case', inActiveSequence, 2, 1.5],
+    14,
+    ['case', inActiveSequence, 4, 2.5],
+    18,
+    ['case', inActiveSequence, 6, 4],
   ]
   const viewShapeOpacity = (full: number): ExpressionSpecification => [
     'case',
@@ -321,7 +321,7 @@ const PhotoProviderLayer = ({
         filter={photoFilter}
         layout={{ 'circle-sort-key': PHOTO_SORT_KEY }}
         paint={{
-          'circle-radius': CIRCLE_RADIUS,
+          'circle-radius': dotRadius,
           'circle-color': BASE_COLOR,
         }}
       />
