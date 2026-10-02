@@ -16,7 +16,6 @@ export type StreetImageryMessages = {
     forwardInHistory: string
     minimize: string
     close: string
-    views: string
     suggestedViews: string
     suggestedViewsHint: string
     noPhoto: (label: string) => string
@@ -36,7 +35,6 @@ const en: StreetImageryMessages = {
     forwardInHistory: 'Forward in history (])',
     minimize: 'Minimize',
     close: 'Close (Esc)',
-    views: 'Views',
     suggestedViews: 'Suggested views',
     suggestedViewsHint: 'Suggested views: where the photo is taken from, and which way it looks',
     noPhoto: (label) => `${label} (no photo)`,
@@ -74,7 +72,6 @@ const de: StreetImageryMessages = {
     forwardInHistory: 'Vor im Verlauf (])',
     minimize: 'Minimieren',
     close: 'Schließen (Esc)',
-    views: 'Blicke',
     suggestedViews: 'Vorgeschlagene Blicke',
     suggestedViewsHint:
       'Vorgeschlagene Blicke: von wo das Foto aufgenommen ist und wohin es schaut',

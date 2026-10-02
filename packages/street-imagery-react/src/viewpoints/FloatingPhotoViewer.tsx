@@ -101,7 +101,7 @@ const SuggestionChip = ({
       aria-label={best ? label : messages.viewer.noPhoto(label)}
       aria-pressed={active}
       className={[
-        'inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs whitespace-nowrap',
+        'flex min-w-0 flex-1 flex-col items-center rounded-md border px-1 py-0.5 text-xs leading-tight',
         active
           ? 'border-fuchsia-600 bg-fuchsia-600 text-white'
           : best
@@ -113,19 +113,21 @@ const SuggestionChip = ({
       title={best ? label : messages.viewer.noMatchingPhoto(label)}
       type="button"
     >
-      <span className="font-medium">
-        {suggestion.viewpoint.label ?? messages.viewpointRole[suggestion.viewpoint.role]}
-      </span>
-      <span
-        aria-hidden
-        className="inline-flex"
-        style={{ transform: `rotate(${suggestion.direction.bearing}deg)` }}
-      >
-        <Icon className="size-3" path={ICONS.arrow} />
+      <span className="flex max-w-full items-center gap-0.5 font-medium">
+        <span className="truncate">
+          {suggestion.viewpoint.label ?? messages.viewpointRole[suggestion.viewpoint.role]}
+        </span>
+        <span
+          aria-hidden
+          className="inline-flex shrink-0"
+          style={{ transform: `rotate(${suggestion.direction.bearing}deg)` }}
+        >
+          <Icon className="size-3" path={ICONS.arrow} />
+        </span>
       </span>
       {best ? (
         <PhotoDate
-          className={active ? 'text-fuchsia-100' : 'text-slate-400'}
+          className={`max-w-full truncate ${active ? 'text-fuchsia-100' : 'text-slate-400'}`}
           timestamp={best.photo.capturedAt}
         />
       ) : (
@@ -370,12 +372,9 @@ export const FloatingPhotoViewer = ({
       ) : suggestions.length > 0 ? (
         <nav
           aria-label={messages.viewer.suggestedViews}
-          className="flex gap-1 overflow-x-auto border-b border-slate-100 px-2 py-1.5"
+          className="flex gap-1 border-b border-slate-100 px-2 py-1.5"
           title={messages.viewer.suggestedViewsHint}
         >
-          <span className="shrink-0 self-center pr-0.5 text-xs text-slate-500">
-            {messages.viewer.views}
-          </span>
           {suggestions.map((suggestion) => (
             <SuggestionChip
               active={suggestion.direction.key === activeDirectionKey}
