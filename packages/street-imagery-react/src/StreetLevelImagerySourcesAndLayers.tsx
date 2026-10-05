@@ -25,6 +25,7 @@ import {
   featureLayerId,
   featureSourceId,
   photoLayerId,
+  photoTargetLayerId,
   photoSourceId,
   sequenceLayerId,
   sequenceSourceId,
@@ -129,6 +130,9 @@ const AGE_SHADE: ExpressionSpecification = [
     BASE_COLOR,
   ],
 ]
+
+/** Radius of the invisible click target around a photo dot. */
+const PHOTO_TARGET_RADIUS_PX = 10
 
 const PHOTO_SORT_KEY: ExpressionSpecification = ['coalesce', ['get', 'capturedAt'], 0]
 const FEATURE_SORT_KEY: ExpressionSpecification = ['coalesce', ['get', 'lastSeenAt'], 0]
@@ -426,6 +430,16 @@ const PhotoProviderLayer = ({
         type="geojson"
         data={photoCollection}
         promoteId="photoId"
+      />
+      {/* The dots are only a few pixels wide: an invisible larger circle takes clicks near them. */}
+      <Layer
+        beforeId={beforeId}
+        id={photoTargetLayerId(providerId)}
+        type="circle"
+        source={photoSrcId}
+        filter={photoFilter}
+        layout={{ 'circle-sort-key': PHOTO_SORT_KEY }}
+        paint={{ 'circle-radius': PHOTO_TARGET_RADIUS_PX, 'circle-opacity': 0 }}
       />
       <Layer
         beforeId={beforeId}

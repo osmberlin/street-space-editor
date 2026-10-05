@@ -52,6 +52,8 @@ export const isBrowserAvailableProvider = (providerId: ProviderId): boolean =>
   providerById[providerId].browserUnavailableReason == null
 
 export const photoLayerId = (providerId: ProviderId) => `photos-${providerId}`
+/** Invisible, larger circles around the photo dots: an easier target for clicks and taps. */
+export const photoTargetLayerId = (providerId: ProviderId) => `photo-targets-${providerId}`
 export const featureLayerId = (providerId: ProviderId) => `features-${providerId}`
 export const sequenceLayerId = (providerId: ProviderId) => `sequences-${providerId}`
 export const viewfieldLayerId = (providerId: ProviderId) => `viewfields-${providerId}`

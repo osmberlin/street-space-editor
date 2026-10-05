@@ -1,6 +1,7 @@
 import {
   featureLayerId,
   photoLayerId,
+  photoTargetLayerId,
   viewfieldLayerId,
   type ProviderId,
 } from '@osm-editor-kit/street-imagery'
@@ -14,8 +15,13 @@ export type StreetImageryClickFeature = {
   sequenceId?: string
 }
 
+/**
+ * Layers to pass as `interactiveLayerIds`. A click returns the features of all layers it hits, the
+ * top one first: the photo dot itself, then view shapes, then the larger invisible targets.
+ */
 export const streetImageryInteractiveLayerIds = (providers: ProviderId[]): string[] => [
   ...providers.map((providerId) => photoLayerId(providerId)),
+  ...providers.map((providerId) => photoTargetLayerId(providerId)),
   ...providers.map((providerId) => viewfieldLayerId(providerId)),
   ...providers.map((providerId) => featureLayerId(providerId)),
 ]
@@ -24,6 +30,10 @@ const parseProviderIdFromLayerId = (layerId: string): ProviderId | null => {
   const photoMatch = layerId.match(/^photos-(.+)$/)
   if (photoMatch) {
     return photoMatch[1] as ProviderId
+  }
+  const targetMatch = layerId.match(/^photo-targets-(.+)$/)
+  if (targetMatch) {
+    return targetMatch[1] as ProviderId
   }
   const viewfieldMatch = layerId.match(/^viewfields-(.+)$/)
   if (viewfieldMatch) {
@@ -56,7 +66,11 @@ export const queryStreetImageryFeatures = (event: {
 
     const props = feature.properties ?? {}
 
-    if (layerId.startsWith('photos-') || layerId.startsWith('viewfields-')) {
+    if (
+      layerId.startsWith('photos-') ||
+      layerId.startsWith('photo-targets-') ||
+      layerId.startsWith('viewfields-')
+    ) {
       const photoId = props.photoId
       if (photoId == null) {
         continue
