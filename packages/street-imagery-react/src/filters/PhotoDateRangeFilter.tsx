@@ -188,10 +188,13 @@ export const PhotoDateRangeFilter = ({
                   className={`flex-1 rounded-t-[1px] ${inRange ? 'bg-slate-500' : 'bg-slate-300'}`}
                   // oxlint-disable-next-line react/no-array-index-key -- fixed parts of the scale
                   key={index}
-                  // Square root: a few photos stay visible next to thousands.
+                  // Logarithmic: a few photos stay visible next to thousands. The first bar holds
+                  // everything older than the slider spans and is often by far the largest.
                   style={{
                     height:
-                      count === 0 ? 0 : Math.max(2, Math.sqrt(count / maxCount) * CHART_HEIGHT_PX),
+                      count === 0
+                        ? 0
+                        : Math.max(2, (Math.log1p(count) / Math.log1p(maxCount)) * CHART_HEIGHT_PX),
                   }}
                   title={count > 0 ? text.photoCount(count) : undefined}
                 />
