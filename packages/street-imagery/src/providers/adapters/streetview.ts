@@ -63,6 +63,9 @@ export const fetchStreetViewMetadata = async (
 
   const url = new URL(STREET_VIEW_METADATA_API)
   url.searchParams.set('location', `${lat},${lng}`)
+  // Street imagery only: without this the nearest panorama can be a photo sphere someone took
+  // inside a building or a shop.
+  url.searchParams.set('source', 'outdoor')
   url.searchParams.set('key', apiKey)
 
   const response = await fetch(url, { signal })
