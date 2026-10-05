@@ -20,6 +20,7 @@ import {
 import type { Bbox, NormalizedPhoto } from '@osm-editor-kit/street-imagery'
 import {
   adapterById,
+  fetchedSequencesMinZoom,
   providerById,
   featureLayerId,
   featureSourceId,
@@ -149,7 +150,8 @@ const PhotoProviderLayer = ({
   const adapter = adapterById[providerId]
   const meta = providerById[providerId]
   const photosMinZoom = Math.max(meta.minZoom, minZoom)
-  const sequencesMinZoom = Math.max(meta.sequencesMinZoom, minZoom)
+  const fetchedLinesMinZoom = fetchedSequencesMinZoom(providerId)
+  const sequencesMinZoom = Math.max(fetchedLinesMinZoom, minZoom)
   const { data: photos = [] } = useProviderPhotos(providerId, bbox, zoom, { minZoom })
   const { data: sequences = [] } = useProviderSequences(providerId, bbox, zoom, { minZoom })
 
@@ -286,8 +288,8 @@ const PhotoProviderLayer = ({
     }
   })
 
-  // Zoomed out, one tile holds tens of thousands of lines: MapLibre reads the provider's tiles
-  // itself there. The lines above take over from `meta.sequencesMinZoom`.
+  // Until photos are loaded, MapLibre reads the provider's line tiles itself: few and small
+  // requests. The lines above (read from the photo tiles, run through the photos) take over then.
   const sequenceTiles = showSequences ? adapter?.sequenceTiles?.() : null
   const sequenceTilesMinZoom = sequenceTiles ? Math.max(sequenceTiles.minZoom, minZoom) : 0
 
@@ -317,7 +319,7 @@ const PhotoProviderLayer = ({
           />
         </>
       ) : null}
-      {sequenceTiles && sequenceTilesMinZoom < meta.sequencesMinZoom ? (
+      {sequenceTiles && sequenceTilesMinZoom < fetchedLinesMinZoom ? (
         <>
           <Source
             key={sequenceTilesSourceId(providerId)}
@@ -334,17 +336,23 @@ const PhotoProviderLayer = ({
             source={sequenceTilesSourceId(providerId)}
             source-layer={sequenceTiles.sourceLayer}
             minzoom={sequenceTilesMinZoom}
-            maxzoom={meta.sequencesMinZoom}
+            maxzoom={fetchedLinesMinZoom}
             filter={renameExpressionProperties(photoFilter, sequenceTiles.properties)}
             layout={{
               'line-cap': 'round',
               'line-join': 'round',
-              'line-sort-key': ['coalesce', ['get', sequenceTiles.properties.capturedAt], 0],
+              'line-sort-key': renameExpressionProperties(
+                ['case', inActiveSequence, 1, 0],
+                sequenceTiles.properties,
+              ),
             }}
             paint={{
               'line-color': renameExpressionProperties(photoCircleColor, sequenceTiles.properties),
-              'line-width': 1.25,
-              'line-opacity': hasActiveSequence ? 0.45 : 1,
+              'line-width': renameExpressionProperties(
+                ['case', inActiveSequence, ACTIVE_LINE_WIDTH, 1.25],
+                sequenceTiles.properties,
+              ),
+              'line-opacity': renameExpressionProperties(lineOpacity, sequenceTiles.properties),
             }}
           />
         </>

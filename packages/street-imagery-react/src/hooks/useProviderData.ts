@@ -1,6 +1,7 @@
 import type { Bbox } from '@osm-editor-kit/street-imagery'
 import {
   adapterById,
+  fetchedSequencesMinZoom,
   providerById,
   providerCoversBbox,
   type ProviderId,
@@ -57,7 +58,7 @@ export const useProviderSequences = (
   // No adapter registered for the provider: nothing to load.
   const adapter = adapterById[providerId]
   const meta = providerById[providerId]
-  const sequencesMinZoom = meta.sequencesMinZoom
+  const sequencesMinZoom = fetchedSequencesMinZoom(providerId)
   const enabled =
     meta.kind === 'photo' &&
     bbox != null &&

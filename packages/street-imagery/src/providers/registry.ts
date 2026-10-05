@@ -37,6 +37,17 @@ export const providerCoversBbox = (providerId: ProviderId, bbox: Bbox): boolean 
   return west <= coverage[2] && east >= coverage[0] && south <= coverage[3] && north >= coverage[1]
 }
 
+/**
+ * Map zoom from which `fetchSequences` is used. A provider with own line tiles
+ * (`sequenceTiles`) draws those until its photos are loaded; the fetched lines take over there.
+ */
+export const fetchedSequencesMinZoom = (providerId: ProviderId): number => {
+  const meta = providerById[providerId]
+  return adapterById[providerId]?.sequenceTiles
+    ? Math.max(meta.minZoom, meta.sequencesMinZoom)
+    : meta.sequencesMinZoom
+}
+
 export const isBrowserAvailableProvider = (providerId: ProviderId): boolean =>
   providerById[providerId].browserUnavailableReason == null
 
@@ -49,7 +60,7 @@ export const photoSourceId = (providerId: ProviderId) => `photos-source-${provid
 export const featureSourceId = (providerId: ProviderId) => `features-source-${providerId}`
 export const sequenceSourceId = (providerId: ProviderId) => `sequences-source-${providerId}`
 export const viewfieldSourceId = (providerId: ProviderId) => `viewfields-source-${providerId}`
-/** Track lines from the provider's vector tiles, drawn below `sequencesMinZoom`. */
+/** Track lines from the provider's vector tiles, drawn until photos are loaded. */
 export const sequenceTilesLayerId = (providerId: ProviderId) => `sequence-tiles-${providerId}`
 export const sequenceTilesSourceId = (providerId: ProviderId) =>
   `sequence-tiles-source-${providerId}`

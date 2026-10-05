@@ -113,8 +113,8 @@ export type NormalizedSequence = {
 
 /**
  * The provider's own vector tiles with its track lines. The map reads them directly (as a
- * MapLibre `vector` source) at zooms below `ProviderMeta.sequencesMinZoom`, where one tile holds
- * far too many lines to load as GeoJSON.
+ * MapLibre `vector` source) until photos are loaded (`ProviderMeta.minZoom`): far fewer and
+ * smaller requests than the photo tiles, which `fetchSequences` reads.
  */
 export type SequenceTiles = {
   /** Tile URL templates with `{z}`, `{x}`, `{y}`. */
@@ -122,8 +122,8 @@ export type SequenceTiles = {
   sourceLayer: string
   minZoom: number
   maxZoom: number
-  /** Names of the tile's properties for `capturedAt` (ms) and `isPano`. */
-  properties: { capturedAt: string; isPano: string }
+  /** Names of the tile's properties for `capturedAt` (ms), `isPano` and `sequenceId`. */
+  properties: { capturedAt: string; isPano: string; sequenceId: string }
 }
 
 /** The code that fetches one provider's map data. Names, colours and limits are in `ProviderMeta`. */
@@ -131,7 +131,7 @@ export type ProviderAdapter = {
   id: ProviderId
   fetchPhotos?: (bbox: Bbox, zoom: number, signal: AbortSignal) => Promise<NormalizedPhoto[]>
   fetchSequences?: (bbox: Bbox, zoom: number, signal: AbortSignal) => Promise<NormalizedSequence[]>
-  /** Track lines for low zooms; `null` while they cannot be requested (no token yet). */
+  /** Track lines until photos are loaded; `null` while they cannot be requested (no token yet). */
   sequenceTiles?: () => SequenceTiles | null
   fetchMapFeatures?: (
     bbox: Bbox,

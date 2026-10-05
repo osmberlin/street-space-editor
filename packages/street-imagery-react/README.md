@@ -52,7 +52,7 @@ const hits = queryStreetImageryFeatures(event)
   onPhotoSelected={setSelection} onEaseMapToPoint={(lng, lat) => map.easeTo({ center: [lng, lat] })} />
 ```
 
-**Zoomed out:** below a provider's zoom for lines (Mapillary: 12), MapLibre reads the provider's own vector tiles for the track lines, where it has them (Mapillary: from zoom 6). Same colours and filters; the lines are not clickable. These tiles are large in dense areas (several MB each); set `options.minZoom` to skip them.
+**Before photos are loaded:** where a provider has own vector tiles with its track lines (Mapillary: zoom 6 to 15), MapLibre reads those itself. Same colours and filters; the lines are not clickable. Zoomed far out these tiles are several MB each in dense areas; set `options.minZoom` to skip them.
 
 **Mapillary:** `createStreetImageryConfig({ mapillaryToken })` or `setStreetImageryConfig` at boot (`@osm-editor-kit/street-imagery`). **Panoramax + Vite:** see `app/vite.config.ts` for the consuming-app setup.
 

@@ -98,15 +98,16 @@ const fetchSequences = async (bbox: Bbox, _zoom: number, signal: AbortSignal) =>
   return sequences
 }
 
-// The tiles have the `sequence` layer from zoom 6 to 14 (below 6 only a point `overview`).
+// The tiles have the `sequence` layer from zoom 6 (below 6 only a point `overview`). Zoom 14
+// tiles also hold every photo (over 10 MB in a city), so the map stays on zoom 13 tiles.
 const sequenceTiles = (): SequenceTiles | null =>
   peekStreetImageryConfig()
     ? {
         tiles: [mapillaryTileUrlTemplate(MVT_PATH)],
         sourceLayer: 'sequence',
         minZoom: 6,
-        maxZoom: 14,
-        properties: { capturedAt: 'captured_at', isPano: 'is_pano' },
+        maxZoom: 13,
+        properties: { capturedAt: 'captured_at', isPano: 'is_pano', sequenceId: 'id' },
       }
     : null
 

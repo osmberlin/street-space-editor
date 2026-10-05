@@ -43,7 +43,8 @@ export const PROVIDERS: ProviderMeta[] = [
     color: '#05CB63',
     // Photo points only when zoomed in: one z14 tile holds up to ~20k images in dense cities.
     minZoom: 15,
-    sequencesMinZoom: 12,
+    // From the provider's line tiles (`sequenceTiles` of the adapter).
+    sequencesMinZoom: 6,
     homepageUrl: 'https://www.mapillary.com',
   },
   {
