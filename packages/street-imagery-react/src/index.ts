@@ -21,8 +21,6 @@ export * from './hooks/useAllProviderPhotos'
 export * from './hooks/useMapViewportBbox'
 export * from './hooks/useProviderData'
 export * from './hooks/usePhotoThumbnails'
-export { MapillaryPanel } from './panels/MapillaryPanel'
-export { PanoramaxPanel } from './panels/PanoramaxPanel'
 export * from './useViewerStore'
 export {
   FloatingPhotoViewer,
@@ -39,13 +37,8 @@ export {
 export { viewSuggestionLabel } from './viewpoints/viewDirectionLabels'
 export * from './viewpoints/useViewpointSessionStore'
 export * from './viewpoints/useViewSuggestions'
-export {
-  mapillaryViewFor,
-  setMapillaryViewerOutlines,
-  turnMapillaryViewerTo,
-  type MapillaryLookAt,
-  type MapillaryViewerOutline,
-} from './panels/mapillaryLookAt'
+// `MapillaryPanel`, `PanoramaxPanel`, `turnMapillaryViewerTo` …: see the `viewer-panels` entry.
+export type { MapillaryLookAt, MapillaryViewerOutline } from './panels/mapillaryLookAt'
 export * from './mapillary/useMapillaryFeatures'
 export { LocationPickOnMap, type LocationPickOnMapProps } from './openers/LocationPickOnMap'
 export * from './openers/useLocationPickStore'

@@ -1,7 +1,11 @@
 import { defineConfig } from 'tsup'
 
 export default defineConfig({
-  entry: { index: 'src/index.ts', 'photo-details': 'src/photo-details/index.ts' },
+  entry: {
+    index: 'src/index.ts',
+    'photo-details': 'src/photo-details/index.ts',
+    'viewer-panels': 'src/viewer-panels/index.ts',
+  },
   format: ['esm'],
   dts: false,
   clean: true,

@@ -17,7 +17,8 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
-    "./photo-details": "./src/photo-details/index.ts"
+    "./photo-details": "./src/photo-details/index.ts",
+    "./viewer-panels": "./src/viewer-panels/index.ts"
   },
   "publishConfig": {
     "access": "public",
@@ -67,6 +68,10 @@
     "./photo-details": {
       "types": "./dist/photo-details/index.d.ts",
       "import": "./dist/photo-details.js"
+    },
+    "./viewer-panels": {
+      "types": "./dist/viewer-panels/index.d.ts",
+      "import": "./dist/viewer-panels.js"
     },
     "./package.json": "./package.json"
   }

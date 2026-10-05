@@ -56,7 +56,7 @@ const hits = queryStreetImageryFeatures(event)
 
 **Mapillary:** `createStreetImageryConfig({ mapillaryToken })` or `setStreetImageryConfig` at boot (`@osm-editor-kit/street-imagery`). **Panoramax + Vite:** see `app/vite.config.ts` for the consuming-app setup.
 
-Also: `useAllProviderPhotos`, `useProviderPhotos` / `useProviderSequences` / `useProviderMapFeatures`, `usePhotoThumbnails`, `resolveSelectedSequence`, `StreetLevelImageryViewCone`, `useViewerBearing` / `useViewerActions`, `MapillaryPanel`, `PanoramaxPanel`.
+Also: `useAllProviderPhotos`, `useProviderPhotos` / `useProviderSequences` / `useProviderMapFeatures`, `usePhotoThumbnails`, `resolveSelectedSequence`, `StreetLevelImageryViewCone`, `useViewerBearing` / `useViewerActions`. The panels themselves (`MapillaryPanel`, `PanoramaxPanel`) are in `@osm-editor-kit/street-imagery-react/viewer-panels`; `StreetLevelImageryViewer` loads them on demand, so `mapillary-js` and `@panoramax/web-viewer` are only loaded when a photo is shown.
 
 ## Viewpoints and floating viewer
 
@@ -123,7 +123,7 @@ const { data: detections } = useMapillaryImageDetections(photo.photoId, {
 
 - Map layers: `filter.mapFeatureValue` limits which signs/objects are drawn: `signGroupFilter(['parking', 'bike'])` for sign groups, or `matchesAnyGroup(…)`.
 - Suggested views: `useViewSuggestions(viewpoints, { sources: [mapillaryPhotoSource, streetViewPhotoSource] })`.
-- `turnMapillaryViewerTo` / `setMapillaryViewerOutlines` work on a mapillary-js `Viewer` you own.
+- `turnMapillaryViewerTo` / `setMapillaryViewerOutlines` (from `@osm-editor-kit/street-imagery-react/viewer-panels`) work on a mapillary-js `Viewer` you own.
 
 ## A selected sign: viewer, bar and map highlight
 
