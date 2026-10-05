@@ -121,6 +121,9 @@ describe('parseWayLanes', () => {
     expect(model.slots).toHaveLength(3)
     expect(model.slots[2]?.kind).toBe('bus')
     expect(model.slots[2]?.busAccess).toBe('designated')
+    // `yes` = buses may use the lane, it is still a normal lane
+    expect(model.slots[0]?.kind).toBe('travel')
+    expect(model.slots[1]?.kind).toBe('travel')
 
     const out = serializeWayLanes(model, tags)
     expect(out['bus:lanes']).toBe('yes|yes|designated')

@@ -26,12 +26,11 @@ function inferKind(
   turn?: string,
   direction?: LaneDirection,
 ): LaneKind {
-  const bike = bicycle?.toLowerCase()
-  if (bike === 'designated' || bike === 'yes') return 'bicycle'
-  const busVal = bus?.toLowerCase()
-  if (busVal === 'designated' || busVal === 'yes') return 'bus'
-  const psvVal = psv?.toLowerCase()
-  if (psvVal === 'designated' || psvVal === 'yes') return 'bus'
+  // Only `designated` makes a bus / cycle lane. `yes` just says the lane may be used
+  // (real tagging: bus:lanes=yes|yes|yes|designated, bicycle:lanes=no|no|designated|yes).
+  if (bicycle?.toLowerCase() === 'designated') return 'bicycle'
+  if (bus?.toLowerCase() === 'designated') return 'bus'
+  if (psv?.toLowerCase() === 'designated') return 'bus'
   if (direction === 'both_ways') return 'both_ways_turn'
   const turnVal = turn?.toLowerCase() ?? ''
   if (turnVal.includes('both_ways') || turnVal.includes('reverse')) return 'both_ways_turn'
