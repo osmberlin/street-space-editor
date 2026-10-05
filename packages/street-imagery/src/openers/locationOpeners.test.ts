@@ -61,6 +61,14 @@ describe('getLocationOpeners', () => {
     })
   })
 
+  it('marks only infra3D as needing an account', () => {
+    const locked = getLocationOpeners().filter((opener) => opener.requiresAccount)
+    expect(locked.map((opener) => opener.id)).toEqual([
+      `infra3d:${PROJECT}`,
+      'infra3d:second-project',
+    ])
+  })
+
   it('has no infra3D opener without a project', () => {
     setStreetImageryConfig(createStreetImageryConfig({ mapillaryToken: 'test-token' }))
     expect(findLocationOpener(`infra3d:${PROJECT}`)).toBeUndefined()

@@ -51,6 +51,11 @@ export type LocationOpener = {
   color: string
   /** `false` when the host config lacks what the service needs. */
   isAvailable: () => boolean
+  /**
+   * `true` when the service shows its images only to people with an account (infra3D): everyone
+   * else lands on its login page. Mark such links, e.g. with a lock icon.
+   */
+  requiresAccount: boolean
   /** The service at the place. Synchronous, so it works as an `<a href>`. */
   locationUrl: (target: OpenTarget) => string
   /**
@@ -132,6 +137,7 @@ const providerOpener = (id: (typeof PROVIDER_OPENER_IDS)[number]): LocationOpene
   label: providerById[id].label,
   color: providerById[id].color,
   isAvailable: () => true,
+  requiresAccount: false,
   locationUrl: ({ lngLat: [lng, lat], zoom }) => providerLocationLink(id, lat, lng, zoom),
 })
 
@@ -170,6 +176,7 @@ export const infra3dOpeners = (): LocationOpener[] =>
     label: `infra3D ${name}`,
     color: '#0F766E',
     isAvailable: () => true,
+    requiresAccount: true,
     locationUrl: ({ lngLat: [lng, lat] }) =>
       buildInfra3dUrl({ mode: 'lookAt', lng, lat, projectUid: uid }),
   }))
