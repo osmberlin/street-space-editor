@@ -16,7 +16,7 @@ import {
   TRANSITION_BAND_HEIGHT_FRAC,
   TRANSITION_CURVE_SAMPLES,
 } from './defaults'
-import { collectPlacementIssues } from './placement'
+import { collectPlacementIssues, parsePlacement } from './placement'
 import { buildCarriagewayPlates, buildCorridorRibbons } from './ribbons'
 import type {
   RoadSpaceChain,
@@ -429,6 +429,48 @@ function sameForkPresence(a: BandGeometry, b: BandGeometry): boolean {
 
 function bandOuterX(band: BandGeometry, side: 'left' | 'right'): number {
   return side === 'left' ? band.leftOuterX : band.rightOuterX
+}
+
+/**
+ * Kerb of the whole road on `side`: on a dual band with a resolved opposite branch the
+ * dimmed side's kerb is that branch's outer carriageway edge, not the median face.
+ */
+function roadKerbX(band: BandGeometry, side: 'left' | 'right', metersToPx: number): number {
+  const fork = band.segment.fork
+  const slots = fork?.siblingSlots
+  const lefts = band.siblingSlotLeftX
+  if (fork?.dimmedSide === side && slots && lefts) {
+    const edges = slots.flatMap((slot, i) =>
+      slot.zone === 'carriageway' && lefts[i] != null
+        ? [side === 'left' ? lefts[i]! : round2(lefts[i]! + slot.widthM * metersToPx)]
+        : [],
+    )
+    if (edges.length > 0) return side === 'left' ? Math.min(...edges) : Math.max(...edges)
+    if (band.placeholder) {
+      return side === 'left'
+        ? band.placeholder.x
+        : round2(band.placeholder.x + band.placeholder.width)
+    }
+  }
+  return side === 'left' ? band.leftKerbX : band.rightKerbX
+}
+
+/** Outer edge of the whole road on `side` (includes the opposite branch's sidepaths). */
+function roadOuterX(band: BandGeometry, side: 'left' | 'right'): number {
+  return side === 'left'
+    ? Math.min(band.leftOuterX, band.leftSpreadOuterX)
+    : Math.max(band.rightOuterX, band.rightSpreadOuterX)
+}
+
+/** Where the two directions meet on a bidirectional band (right edge of the last backward slot). */
+function directionSplitX(band: BandGeometry, metersToPx: number): number | null {
+  const slots = band.segment.slots
+  let last = -1
+  slots.forEach((slot, i) => {
+    if (slot.direction === 'backward') last = i
+  })
+  if (last < 0 || last === slots.length - 1) return null
+  return round2(band.slotLeftX[last]! + slots[last]!.widthM * metersToPx)
 }
 
 function bandOuterWidth(band: BandGeometry): number {
@@ -932,7 +974,10 @@ function collectSolvedPlacementIssues(layoutBands: BandGeometry[], metersToPx: n
     const aTag = a.segment.placementTag
     const bTag = b.segment.placementTag
     if (!aTag || !bTag) continue
-    if (a.segment.placement.kind === 'transition' || b.segment.placement.kind === 'transition') {
+    if (
+      parsePlacement(aTag)?.kind === 'transition' ||
+      parsePlacement(bTag)?.kind === 'transition'
+    ) {
       continue
     }
     const deltaM = Math.abs(a.centrelineX - b.centrelineX) / metersToPx
@@ -1398,149 +1443,93 @@ export function layoutRoadSpace(
     }
   }
 
-  // Continuous travel-kerbs at carriageway boundaries. Broken at dual ↔ non-dual
-  // and at implied junctions so tapers never cross a cross-street gap.
+  // Continuous road kerbs and outer edges. They run through dual ↔ non-dual seams
+  // (S-curve across the glue band, like the ribbons) and break only at implied junctions.
   {
-    const hasFork = (i: number) => layoutBands[i]!.segment.fork != null
     const isJunction = (i: number) => layoutBands[i]!.junction === true
+    const edge = (b: BandGeometry, x: number) => ({
+      y: b.y,
+      height: b.height,
+      x,
+      width: round2(roadOuterX(b, 'right') - roadOuterX(b, 'left')),
+      synthetic: b.segment.synthetic,
+    })
+    const hasDistinctOuter = (b: BandGeometry, side: 'left' | 'right'): boolean =>
+      differs(roadOuterX(b, side), roadKerbX(b, side, metersToPx))
+
     let start = 0
     let runIdx = 0
+    let outerIdx = 0
     while (start < layoutBands.length) {
       if (isJunction(start)) {
         start++
         continue
       }
       let end = start + 1
-      while (end < layoutBands.length && !isJunction(end) && hasFork(end) === hasFork(start)) {
-        end++
-      }
+      while (end < layoutBands.length && !isJunction(end)) end++
       const slice = layoutBands.slice(start, end)
-      emitVerticalPolyline(
-        polylines,
-        `kerb-left-${runIdx}`,
-        'kerb',
-        'solid',
-        slice.map((b) => ({
-          y: b.y,
-          height: b.height,
-          x: b.leftKerbX,
-          width: bandOuterWidth(b),
-          synthetic: b.segment.synthetic,
-        })),
-        'left',
-      )
-      emitVerticalPolyline(
-        polylines,
-        `kerb-right-${runIdx}`,
-        'kerb',
-        'solid',
-        slice.map((b) => ({
-          y: b.y,
-          height: b.height,
-          x: b.rightKerbX,
-          width: bandOuterWidth(b),
-          synthetic: b.segment.synthetic,
-        })),
-        'right',
-      )
+
+      for (const side of ['left', 'right'] as const) {
+        emitVerticalPolyline(
+          polylines,
+          `kerb-${side}-${runIdx}`,
+          'kerb',
+          'solid',
+          slice.map((b) => edge(b, roadKerbX(b, side, metersToPx))),
+          side,
+        )
+
+        // Outer edges only where they differ from the kerb (sidepath present).
+        let subStart = 0
+        while (subStart < slice.length) {
+          while (subStart < slice.length && !hasDistinctOuter(slice[subStart]!, side)) subStart++
+          if (subStart >= slice.length) break
+          let subEnd = subStart + 1
+          while (subEnd < slice.length && hasDistinctOuter(slice[subEnd]!, side)) subEnd++
+          emitVerticalPolyline(
+            polylines,
+            `outer-edge-${side}-${outerIdx++}`,
+            'outer_edge',
+            'solid',
+            slice.slice(subStart, subEnd).map((b) => edge(b, roadOuterX(b, side))),
+            side,
+          )
+          subStart = subEnd
+        }
+      }
       runIdx++
       start = end
     }
   }
 
-  // Placeholder outer face (spreading side) — dual bands only; never merged into a
-  // taper that crosses the median from a non-dual neighbour.
-  {
-    const leftPlaceholderXs = layoutBands.map((b) =>
-      b.placeholder && b.segment.fork?.dimmedSide === 'left' ? [b.placeholder.x] : [],
-    )
-    const rightPlaceholderXs = layoutBands.map((b) =>
-      b.placeholder && b.segment.fork?.dimmedSide === 'right'
-        ? [round2(b.placeholder.x + b.placeholder.width)]
-        : [],
-    )
-    emitMergedVerticalRuns(
-      polylines,
-      'kerb-placeholder-left',
-      'kerb',
-      'solid',
-      leftPlaceholderXs,
-      layoutBands,
-    )
-    emitMergedVerticalRuns(
-      polylines,
-      'kerb-placeholder-right',
-      'kerb',
-      'solid',
-      rightPlaceholderXs,
-      layoutBands,
-    )
-  }
-
-  // Outer edges only where they differ from the travel kerb (sidepath present).
-  // Emit like kerbs (continuous X-per-band) so width changes get diagonals — never
-  // group by canonical X (that leaves disconnected stubs and 90° gaps).
-  {
-    const hasDistinctOuter = (b: BandGeometry, side: 'left' | 'right'): boolean => {
-      if (side === 'left') {
-        if (b.placeholder && b.segment.fork?.dimmedSide === 'left') {
-          return differs(b.leftOuterX, b.leftSpreadOuterX) && differs(b.leftOuterX, b.leftKerbX)
-        }
-        return differs(b.leftOuterX, b.leftKerbX)
-      }
-      if (b.placeholder && b.segment.fork?.dimmedSide === 'right') {
-        return differs(b.rightOuterX, b.rightSpreadOuterX) && differs(b.rightOuterX, b.rightKerbX)
-      }
-      return differs(b.rightOuterX, b.rightKerbX)
+  // Median opening: where a bidirectional band meets a dual band through a glue band,
+  // the two median faces grow out of the point where the directions meet.
+  for (let i = 1; i < layoutBands.length - 1; i++) {
+    const glue = layoutBands[i]!
+    if (!glue.segment.synthetic || glue.junction) continue
+    const above = layoutBands[i - 1]!
+    const below = layoutBands[i + 1]!
+    const dual = above.medianLeftX != null ? above : below.medianLeftX != null ? below : null
+    const plain = dual === above ? below : above
+    if (!dual || plain.segment.fork || dual.medianRightX == null) continue
+    if (!differs(dual.medianLeftX!, dual.medianRightX)) continue
+    const tipX = directionSplitX(plain, metersToPx)
+    if (tipX == null) continue
+    const dualY = round2(dual === above ? glue.y : glue.y + glue.height)
+    const plainY = round2(dual === above ? glue.y + glue.height : glue.y)
+    for (const [name, faceX] of [
+      ['left', dual.medianLeftX!],
+      ['right', dual.medianRightX],
+    ] as const) {
+      const points: Array<{ x: number; y: number }> = []
+      appendSCurve(points, faceX, dualY, tipX, plainY, TRANSITION_CURVE_SAMPLES)
+      polylines.push({
+        id: `kerb-median-opening-${name}-${i}`,
+        kind: 'kerb',
+        style: 'solid',
+        points: dedupePoints(points),
+      })
     }
-
-    const emitOuterRuns = (side: 'left' | 'right', idPrefix: string) => {
-      const hasFork = (i: number) => layoutBands[i]!.segment.fork != null
-      const isJunction = (i: number) => layoutBands[i]!.junction === true
-      let start = 0
-      let runIdx = 0
-      while (start < layoutBands.length) {
-        if (isJunction(start)) {
-          start++
-          continue
-        }
-        let end = start + 1
-        while (end < layoutBands.length && !isJunction(end) && hasFork(end) === hasFork(start)) {
-          end++
-        }
-        const slice = layoutBands.slice(start, end)
-        let subStart = 0
-        while (subStart < slice.length) {
-          while (subStart < slice.length && !hasDistinctOuter(slice[subStart]!, side)) {
-            subStart++
-          }
-          if (subStart >= slice.length) break
-          let subEnd = subStart + 1
-          while (subEnd < slice.length && hasDistinctOuter(slice[subEnd]!, side)) {
-            subEnd++
-          }
-          emitVerticalPolyline(
-            polylines,
-            `${idPrefix}-${runIdx++}`,
-            'outer_edge',
-            'solid',
-            slice.slice(subStart, subEnd).map((b) => ({
-              y: b.y,
-              height: b.height,
-              x: side === 'left' ? b.leftOuterX : b.rightOuterX,
-              width: bandOuterWidth(b),
-              synthetic: b.segment.synthetic,
-            })),
-            side,
-          )
-          subStart = subEnd
-        }
-        start = end
-      }
-    }
-
-    emitOuterRuns('left', 'outer-edge-left')
-    emitOuterRuns('right', 'outer-edge-right')
   }
 
   // Median faces as kerb runs (per dual band, merged when consecutive)

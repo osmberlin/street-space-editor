@@ -223,6 +223,24 @@ function splitByDirection(slots: RoadSpaceSlot[]): {
   return { backward, forward, other }
 }
 
+/**
+ * Split a bidirectional stack where the directions meet: everything up to the last
+ * backward lane (with the left sidewalk / track) goes with the opposite branch of a
+ * dual carriageway, the rest (with the right sidewalk / track) with the travel branch.
+ */
+function splitAtDirectionChange(slots: RoadSpaceSlot[]): ReturnType<typeof splitByDirection> {
+  let lastBackward = -1
+  slots.forEach((slot, index) => {
+    if (slot.direction === 'backward') lastBackward = index
+  })
+  const indexed = slots.map((slot, index) => ({ slot, index }))
+  return {
+    backward: indexed.slice(0, lastBackward + 1),
+    forward: indexed.slice(lastBackward + 1),
+    other: [],
+  }
+}
+
 function nwMatch(
   slotsA: RoadSpaceSlot[],
   slotsB: RoadSpaceSlot[],
@@ -323,7 +341,7 @@ export function matchSegmentStacks(a: SegmentStack, b: SegmentStack): StackCorre
   const bDual = hasResolvableSibling(b)
 
   if (aBi && bDual && b.siblingSlots) {
-    const aSplit = splitByDirection(a.slots)
+    const aSplit = splitAtDirectionChange(a.slots)
     const travel = nwMatch(
       aSplit.forward.map((x) => x.slot),
       b.slots,
@@ -614,6 +632,14 @@ export function seamChangeMagnitude(
 
   if (corr.unmatchedA.length > 0 || corr.unmatchedB.length > 0) {
     change = Math.max(change, 0.5)
+  }
+
+  // A dual split spreads the road by the opposite branch + median: give the glue band
+  // room for that sideways move.
+  if ((segA.fork != null) !== (segB.fork != null)) {
+    const spreadM = (seg: RoadSpaceSegment) =>
+      seg.fork ? siblingStackWidthM(seg.fork.siblingSlots) + forkGapM(seg.fork) : 0
+    change = Math.max(change, Math.abs(spreadM(segA) - spreadM(segB)) / 2)
   }
 
   return change

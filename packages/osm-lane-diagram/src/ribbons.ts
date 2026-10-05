@@ -60,6 +60,8 @@ type SlotSlice = {
   y: number
   height: number
   dimmed: boolean
+  /** Zero-height stand-in for the neighbour across a dual split (edge target only). */
+  ghost?: 'above' | 'below'
   isSibling: boolean
   isPlaceholder: boolean
   turnKey: string
@@ -290,12 +292,71 @@ function collectSyntheticSlices(
     })
   }
 
+  /**
+   * A lane that starts or ends between other lanes (e.g. a left-turn pocket between the
+   * two directions) grows out of its same-direction neighbour: the hinge is that
+   * neighbour's facing edge on the other band.
+   */
+  const interiorHingeX = (
+    own: BandGeometry,
+    other: BandGeometry,
+    index: number,
+    ownIsAbove: boolean,
+  ): number | null => {
+    const slots = own.segment.slots
+    const slot = slots[index]!
+    const partnerOf = (i: number) => {
+      const pair = corr.pairs.find(
+        (p) =>
+          (ownIsAbove ? p.indexA : p.indexB) === i &&
+          (p.branchA ?? 'travel') === 'travel' &&
+          (p.branchB ?? 'travel') === 'travel',
+      )
+      return pair
+        ? sliceGeometry(other, ownIsAbove ? pair.indexB : pair.indexA, false, metersToPx)
+        : null
+    }
+    const sameFlow = (i: number) =>
+      slots[i]?.zone === 'carriageway' && slots[i]!.direction === slot.direction
+    const right = sameFlow(index + 1) ? partnerOf(index + 1) : null
+    const left = sameFlow(index - 1) ? partnerOf(index - 1) : null
+    // A left-turn pocket leaves its parent on the parent's left, so prefer the right neighbour.
+    const preferRight = turnSignature(slot) !== 'right'
+    if (preferRight && right) return right.leftX
+    if (left) return left.rightX
+    if (right) return right.leftX
+    return null
+  }
+
+  /**
+   * An extra lane of the opposite dual branch that has no partner on a plain
+   * (non-dual) neighbour: when it is the branch's outer lane, pinch it to that
+   * neighbour's kerb so the fill follows the kerb line.
+   */
+  const pushSiblingHinge = (own: BandGeometry, other: BandGeometry, index: number) => {
+    const fork = own.segment.fork
+    if (!fork?.siblingSlots || other.segment.fork) return
+    const geom = sliceGeometry(own, index, true, metersToPx)
+    if (!geom || geom.slot.zone !== 'carriageway') return
+    const cw = fork.siblingSlots
+      .map((slot, i) => (slot.zone === 'carriageway' ? i : -1))
+      .filter((i) => i >= 0)
+    if (fork.dimmedSide === 'left' && index === cw[0]) {
+      pushHinge(geom, other.leftKerbX, index, true)
+    } else if (fork.dimmedSide === 'right' && index === cw.at(-1)) {
+      pushHinge(geom, other.rightKerbX, index, true)
+    }
+  }
+
   // Disappearing below→above (unmatchedB): pinch to the above kerb when the slot is
   // flush with the below kerb and protrudes past the narrower above carriageway.
   // Geometry-based (not merely cw index) so placement shifts still get a hinge.
   for (const u of corr.unmatchedB) {
     const branch = u.branch ?? 'travel'
-    if (branch === 'sibling') continue
+    if (branch === 'sibling') {
+      pushSiblingHinge(below, above, u.index)
+      continue
+    }
     const key = `${branch}:${u.index}`
     if (matchedBelow.has(key)) continue
     const belowGeom = sliceGeometry(below, u.index, false, metersToPx)
@@ -306,6 +367,9 @@ function collectSyntheticSlices(
       pushHinge(belowGeom, above.rightKerbX, u.index, false)
     } else if (flushLeft && belowGeom.leftX < above.leftKerbX - EPS) {
       pushHinge(belowGeom, above.leftKerbX, u.index, false)
+    } else if (!flushLeft && !flushRight) {
+      const hinge = interiorHingeX(below, above, u.index, false)
+      if (hinge != null) pushHinge(belowGeom, hinge, u.index, false)
     }
   }
 
@@ -314,7 +378,10 @@ function collectSyntheticSlices(
   // Appearing above→below (unmatchedA): same geometric flush/protrusion rule.
   for (const u of corr.unmatchedA) {
     const branch = u.branch ?? 'travel'
-    if (branch === 'sibling') continue
+    if (branch === 'sibling') {
+      pushSiblingHinge(above, below, u.index)
+      continue
+    }
     const key = `${branch}:${u.index}`
     if (matchedAbove.has(key)) continue
     const aboveGeom = sliceGeometry(above, u.index, false, metersToPx)
@@ -325,6 +392,9 @@ function collectSyntheticSlices(
       pushHinge(aboveGeom, below.rightKerbX, u.index, false)
     } else if (flushLeft && aboveGeom.leftX < below.leftKerbX - EPS) {
       pushHinge(aboveGeom, below.leftKerbX, u.index, false)
+    } else if (!flushLeft && !flushRight) {
+      const hinge = interiorHingeX(above, below, u.index, true)
+      if (hinge != null) pushHinge(aboveGeom, hinge, u.index, false)
     }
   }
 
@@ -395,7 +465,6 @@ function canChain(
 ): boolean {
   if (Math.abs(a.bandIndex - b.bandIndex) !== 1) return false
   if (bands[a.bandIndex]?.junction || bands[b.bandIndex]?.junction) return false
-  if (a.isSibling !== b.isSibling) return false
   if (a.isPlaceholder !== b.isPlaceholder) return false
   if (a.isPlaceholder && b.isPlaceholder) return true
 
@@ -413,7 +482,11 @@ function canChain(
   let branchA = upper.isSibling ? 'sibling' : 'travel'
   let branchB = lower.isSibling ? 'sibling' : 'travel'
 
+  // Glue slices carry the lower band's branch and remember the upper one (corrBranchA),
+  // so a lane can chain from a plain band into the opposite branch of a dual band.
+  const sameBranch = a.isSibling === b.isSibling
   if (upperBand.segment.synthetic && !lowerBand.segment.synthetic) {
+    if (!sameBranch) return false
     // Appearing / disappearing hinges share the real slot id (no corr pair).
     if (upper.slot.id === lower.slot.id && upper.wayId === lower.wayId) return true
     indexA = upper.corrIndexA ?? upper.slotIndex
@@ -421,12 +494,14 @@ function canChain(
     branchA = upper.corrBranchA ?? (upper.isSibling ? 'sibling' : 'travel')
     branchB = lower.isSibling ? 'sibling' : 'travel'
   } else if (!upperBand.segment.synthetic && lowerBand.segment.synthetic) {
-    if (upper.slot.id === lower.slot.id && upper.wayId === lower.wayId) return true
+    if (sameBranch && upper.slot.id === lower.slot.id && upper.wayId === lower.wayId) return true
+    if (lower.corrIndexA == null && !sameBranch) return false
     indexA = upper.slotIndex
     indexB = lower.slotIndex
     branchA = upper.isSibling ? 'sibling' : 'travel'
     branchB = lower.isSibling ? 'sibling' : 'travel'
   } else if (!upperBand.segment.synthetic && !lowerBand.segment.synthetic) {
+    if (!sameBranch) return false
     indexA = upper.slotIndex
     indexB = lower.slotIndex
   } else {
@@ -628,6 +703,15 @@ function ribbonPolygon(chain: Chain, bands: BandGeometry[]): Array<{ x: number; 
         }
       }
     }
+    if (s.ghost) {
+      return {
+        y: s.ghost === 'above' ? round2(band.y + band.height) : band.y,
+        height: 0,
+        x: leftX,
+        width: round2(Math.max(0, rightX - leftX)),
+        synthetic: false,
+      }
+    }
     return {
       // Exact band extents so ribbon S-curves meet kerb/outer/plate samples.
       y: band.y,
@@ -657,14 +741,16 @@ function chainToRibbon(chain: Chain, bands: BandGeometry[]): SceneRibbon | null 
   const points = ribbonPolygon(chain, bands)
   if (points.length < 3) return null
 
-  const bandSlices: SceneRibbonBandSlice[] = chain.map((s) => ({
-    bandIndex: s.bandIndex,
-    wayId: s.wayId,
-    role: bands[s.bandIndex]!.segment.role,
-    slotId: s.slot.id,
-    y: s.y,
-    height: s.height,
-  }))
+  const bandSlices: SceneRibbonBandSlice[] = chain
+    .filter((s) => !s.ghost)
+    .map((s) => ({
+      bandIndex: s.bandIndex,
+      wayId: s.wayId,
+      role: bands[s.bandIndex]!.segment.role,
+      slotId: s.slot.id,
+      y: s.y,
+      height: s.height,
+    }))
 
   const currentSlice = chain.find(
     (s) => bands[s.bandIndex]!.segment.role === 'current' && !bands[s.bandIndex]!.segment.synthetic,
@@ -690,7 +776,7 @@ function chainToRibbon(chain: Chain, bands: BandGeometry[]): SceneRibbon | null 
     widthProvenance: head.slot.widthProvenance,
     label: head.isPlaceholder ? 'sibling' : head.slot.label,
     turn: glyphSlice.slot.turn,
-    dimmed: chain.every((s) => s.dimmed) || undefined,
+    dimmed: chain.every((s) => s.dimmed || s.ghost != null) || undefined,
     points,
     bandSlices,
     glyphCx: glyphSlice.centerX,
@@ -903,6 +989,33 @@ export function enrichRibbonTapers(
   }
 }
 
+/**
+ * A lane that runs from a plain band into the opposite (dimmed) branch of a dual band is
+ * one chain, but two fills: the opposite branch stays dimmed. Cut it at the glue band;
+ * the glue goes with the plain side and aims at a zero-height ghost of the other side,
+ * so the S-curve still lands on the real lane edges.
+ */
+function splitChainAtBranchChange(chain: Chain, bands: BandGeometry[]): Chain[] {
+  for (let k = 1; k < chain.length - 1; k++) {
+    const glue = chain[k]!
+    if (!bands[glue.bandIndex]!.segment.synthetic) continue
+    const upper = chain[k - 1]!
+    const lower = chain[k + 1]!
+    if (upper.ghost || lower.ghost || upper.isSibling === lower.isSibling) continue
+    if (upper.isSibling) {
+      return [
+        chain.slice(0, k),
+        ...splitChainAtBranchChange([{ ...upper, ghost: 'above' }, ...chain.slice(k)], bands),
+      ]
+    }
+    return [
+      [...chain.slice(0, k + 1), { ...lower, ghost: 'below' }],
+      ...splitChainAtBranchChange(chain.slice(k + 1), bands),
+    ]
+  }
+  return [chain]
+}
+
 /** Build continuous corridor ribbons across segment bands. */
 export function buildCorridorRibbons(
   bands: BandGeometry[],
@@ -912,13 +1025,24 @@ export function buildCorridorRibbons(
 ): SceneRibbon[] {
   if (bands.length === 0) return []
   const slices = collectBandSlices(bands, metersToPx, extentForBand, corrBetweenBands)
-  const chains = buildChains(slices, bands, corrBetweenBands)
+  const chains = buildChains(slices, bands, corrBetweenBands).flatMap((chain) =>
+    splitChainAtBranchChange(chain, bands),
+  )
   const ribbons: SceneRibbon[] = []
+  const fixedGeometry = new Set<SceneRibbon>()
   for (const chain of chains) {
     const ribbon = chainToRibbon(chain, bands)
-    if (ribbon && ribbon.kind !== 'median') ribbons.push(ribbon)
+    if (!ribbon || ribbon.kind === 'median') continue
+    ribbons.push(ribbon)
+    if (chain.some((s) => s.ghost)) fixedGeometry.add(ribbon)
   }
-  enrichRibbonTapers(ribbons, bands, metersToPx, slices, corrBetweenBands)
+  enrichRibbonTapers(
+    ribbons.filter((r) => !fixedGeometry.has(r)),
+    bands,
+    metersToPx,
+    slices,
+    corrBetweenBands,
+  )
   for (const ribbon of ribbons) {
     ribbon.points = expandPolygonSeamOverlap(ribbon.points)
   }

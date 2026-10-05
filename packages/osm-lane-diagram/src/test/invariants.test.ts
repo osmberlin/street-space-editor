@@ -361,4 +361,47 @@ describe('review regressions', () => {
     const bottom = guide.points.at(-1)!
     expect(bottom.x).toBeLessThan(top.x)
   })
+
+  test('sidewalks pair across a dual split: left with the opposite branch, right with travel', () => {
+    const chain = fixtureChain('dual-carriageway-island')
+    const { correspondences } = solveChainOffsets(chain.segments)
+    // segments are next, current (dual) and prev (bidirectional) top to bottom
+    const dual = chain.segments[1]!
+    const plain = chain.segments[2]!
+    const sidewalkPairs = correspondences[1]!.pairs.filter(
+      (p) => plain.slots[p.indexB]?.kind === 'sidewalk',
+    )
+    expect(sidewalkPairs.map((p) => p.branchA).sort()).toEqual(['sibling', 'travel'])
+    for (const p of sidewalkPairs) {
+      const upper =
+        p.branchA === 'sibling' ? dual.fork!.siblingSlots![p.indexA]! : dual.slots[p.indexA]!
+      expect(upper.kind).toBe('sidewalk')
+    }
+  })
+
+  test('kerbs run through a dual split instead of stopping at it', () => {
+    const scene = sceneOf('karl-marx-bi-to-dual')
+    const top = Math.min(...scene.bands.map((b) => b.y))
+    const bottom = Math.max(...scene.bands.map((b) => b.y + b.height))
+    for (const side of ['left', 'right']) {
+      const kerb = scene.polylines.find((l) => l.id === `kerb-${side}-0`)!
+      const ys = kerb.points.map((p) => p.y)
+      expect(Math.min(...ys)).toBeCloseTo(top, 1)
+      expect(Math.max(...ys)).toBeCloseTo(bottom, 1)
+    }
+  })
+
+  test('the kerb of the opposite branch sits between its lanes and its sidewalk', () => {
+    const scene = sceneOf('dual-carriageway-island')
+    const kerb = scene.polylines.find((l) => l.id === 'kerb-left-0')!
+    const siblingSidewalk = scene.slotRects.find((r) => r.kind === 'sidewalk' && r.dimmed)!
+    expect(kerb.points[0]!.x).toBeCloseTo(siblingSidewalk.x + siblingSidewalk.width, 1)
+  })
+
+  test('a turn pocket between the two directions tapers out of its neighbour lane', () => {
+    const scene = sceneOf('karl-marx-crossing-turns')
+    const pocket = scene.ribbons.find((r) => r.turn === 'left' && r.direction === 'forward')!
+    // More than the pocket's own band: the fill continues into the glue band below it.
+    expect(pocket.bandSlices.length).toBeGreaterThanOrEqual(2)
+  })
 })
