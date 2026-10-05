@@ -15,7 +15,11 @@ import { panoramaxPhotoFromMetadata } from './panoramaxPhotoFromMetadata'
 
 const panoramaxApiEndpoint = () => `${getStreetImageryConfig().panoramaxApiBase}/api`
 
-/** The legend sits in the page, outside the viewer's box, so it needs page-level CSS. */
+/**
+ * `widgets="false"` keeps the viewer from creating the legend; this covers a viewer that was
+ * created before `hideLegend` was set. The legend sits in the page, outside the viewer's box, so
+ * it needs page-level CSS.
+ */
 const HIDE_LEGEND_CSS =
   'pnx-photo-viewer pnx-bottom-drawer, pnx-photo-viewer pnx-picture-legend { display: none !important; }'
 
@@ -29,8 +33,9 @@ type PanoramaxPanelProps = {
   /** The shown picture with creator, licence, local capture time and camera. */
   onViewerPhoto?: (photo: NormalizedPhoto) => void
   /**
-   * Hide the viewer's own legend (a bottom drawer in narrow containers). The host must then show
-   * creator and licence itself, from `onViewerPhoto`.
+   * Leave out the viewer's own widgets: the legend (a bottom drawer in narrow containers), the
+   * player and the zoom buttons. The host must then show creator and licence itself, from
+   * `onViewerPhoto`. Stepping through a sequence still works with the arrows in the photo.
    */
   hideLegend?: boolean
 }
@@ -240,6 +245,9 @@ export const PanoramaxPanel = ({
         className="block h-full w-full"
         endpoint={panoramaxApiEndpoint()}
         url-parameters="false"
+        // Without widgets the viewer does not create its legend, bottom drawer, player and zoom
+        // buttons at all. It reads this once, when it is created.
+        widgets={hideLegend ? 'false' : undefined}
         picture={photo.photoId}
         sequence={photo.sequenceId ?? undefined}
       />
