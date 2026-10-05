@@ -1,15 +1,23 @@
 import type { Feature } from 'geojson'
 import { peekStreetImageryConfig } from '../../config'
 import type { ViewpointPhotoSource } from '../../viewpoints/photoSources'
-import { pointLngLat } from '../fetchMvt'
-import { fetchMapillaryMvtTiles, mapillaryTileUrlTemplate } from '../mapillaryShared'
+import { fetchMvt, pointLngLat } from '../fetchMvt'
+import {
+  fetchMapillaryMvtTiles,
+  MAPILLARY_TILE_ZOOM,
+  mapillaryTileUrl,
+  mapillaryTileUrlTemplate,
+} from '../mapillaryShared'
 import type {
   Bbox,
   NormalizedPhoto,
   NormalizedSequence,
   ProviderAdapter,
   SequenceTiles,
+  TileCoord,
 } from '../model'
+import { collectSettledTiles, fetchTileCached, getTileCacheKey } from '../tileCache'
+import { tilesForBbox } from '../tileMath'
 
 const MVT_PATH = 'mly1_public'
 
@@ -61,28 +69,36 @@ export const normalizeMapillarySequenceFeature = (
   }
 }
 
-const fetchMapillaryTiles = async (bbox: Bbox, signal: AbortSignal, layer: 'image' | 'sequence') =>
-  fetchMapillaryMvtTiles('mapillary', MVT_PATH, bbox, signal, [layer])
-
-const fetchPhotos = async (bbox: Bbox, _zoom: number, signal: AbortSignal) => {
-  const tileLayers = await fetchMapillaryTiles(bbox, signal, 'image')
+// A city-centre tile holds about 180,000 photos. The cache keeps the photos as they are used,
+// not the tile's GeoJSON, so nothing is converted again on each pan.
+const fetchPhotoTile = async (tile: TileCoord, signal: AbortSignal) => {
+  const layers = await fetchMvt(mapillaryTileUrl(MVT_PATH, tile), tile, signal, ['image'])
   const photos: NormalizedPhoto[] = []
-
-  for (const layers of tileLayers) {
-    const imageFeatures = layers.image ?? []
-    for (const feature of imageFeatures) {
-      const normalized = normalizeMapillaryImageFeature(feature)
-      if (normalized) {
-        photos.push({ providerId: 'mapillary', ...normalized })
-      }
+  for (const feature of layers.image ?? []) {
+    const normalized = normalizeMapillaryImageFeature(feature)
+    if (normalized) {
+      photos.push({ providerId: 'mapillary', ...normalized })
     }
   }
-
   return photos
 }
 
+const fetchPhotos = async (bbox: Bbox, _zoom: number, signal: AbortSignal) => {
+  const tiles = tilesForBbox(bbox, MAPILLARY_TILE_ZOOM, { skipNullIsland: true })
+  const tilePhotos = await collectSettledTiles(
+    tiles.map((tile) =>
+      fetchTileCached(
+        getTileCacheKey('mapillary:photos', tile),
+        (innerSignal) => fetchPhotoTile(tile, innerSignal),
+        signal,
+      ),
+    ),
+  )
+  return tilePhotos.flat()
+}
+
 const fetchSequences = async (bbox: Bbox, _zoom: number, signal: AbortSignal) => {
-  const tileLayers = await fetchMapillaryTiles(bbox, signal, 'sequence')
+  const tileLayers = await fetchMapillaryMvtTiles('mapillary', MVT_PATH, bbox, signal, ['sequence'])
   const sequences: NormalizedSequence[] = []
 
   for (const layers of tileLayers) {

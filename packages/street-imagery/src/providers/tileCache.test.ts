@@ -111,4 +111,30 @@ describe('collectSettledTiles', () => {
       ]),
     ).rejects.toThrow('outage')
   })
+
+  it('drops the least recently used tiles when they hold too many items', async () => {
+    const signal = new AbortController().signal
+    const tile = (items: number) => () => Promise.resolve(Array.from({ length: items }, () => 0))
+    const refetched = vi.fn(tile(1))
+
+    await fetchTileCached('a', tile(300_000), signal)
+    await fetchTileCached('b', tile(300_000), signal)
+    // Use `a` again, so `b` is the oldest when `c` goes over the limit.
+    await fetchTileCached('a', refetched, signal)
+    await fetchTileCached('c', tile(300_000), signal)
+
+    await fetchTileCached('a', refetched, signal)
+    expect(refetched).toHaveBeenCalledTimes(0)
+    await fetchTileCached('b', refetched, signal)
+    expect(refetched).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps a single tile that is over the limit on its own', async () => {
+    const signal = new AbortController().signal
+    const fetcher = vi.fn(() => Promise.resolve(Array.from({ length: 2_000_000 }, () => 0)))
+
+    await fetchTileCached('huge', fetcher, signal)
+    await fetchTileCached('huge', fetcher, signal)
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
 })

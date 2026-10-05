@@ -1,5 +1,5 @@
 import { getStreetImageryConfig } from '../config'
-import { fetchMvt, pointLngLat } from './fetchMvt'
+import { fetchMvt, pointLngLat, type MvtLayers } from './fetchMvt'
 import type { Bbox, TileCoord } from './model'
 import { collectSettledTiles, fetchTileCached, getTileCacheKey } from './tileCache'
 import { tilesForBbox } from './tileMath'
@@ -19,6 +19,9 @@ export const mapillaryTileUrlTemplate = (path: string) => {
   return `https://tiles.mapillary.com/maps/vtp/${path}/2/{z}/{x}/{y}?access_token=${token}`
 }
 
+const countMvtFeatures = (layers: MvtLayers) =>
+  Object.values(layers).reduce((sum, features) => sum + features.length, 0)
+
 export const fetchMapillaryMvtTiles = async (
   cachePrefix: string,
   path: string,
@@ -36,6 +39,7 @@ export const fetchMapillaryMvtTiles = async (
         key,
         (innerSignal) => fetchMvt(mapillaryTileUrl(path, tile), tile, innerSignal, layerNames),
         signal,
+        countMvtFeatures,
       )
     }),
   )
