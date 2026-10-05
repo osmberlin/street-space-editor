@@ -46,6 +46,11 @@ export type PhotoDateRangeFilterProps = {
    * or left out.
    */
   dateInputs?: 'collapsed' | 'open' | 'none'
+  /**
+   * The "All dates" action next to the chosen range, which removes both limits. Default true;
+   * without it the user moves both handles to the ends.
+   */
+  allDatesAction?: boolean
   className?: string
 }
 
@@ -83,6 +88,7 @@ export const PhotoDateRangeFilter = ({
   now: nowProp,
   dateInputs = 'collapsed',
   className,
+  allDatesAction = true,
 }: PhotoDateRangeFilterProps) => {
   const { locale, messages } = useStreetImageryI18n()
   const text = messages.dateFilter
@@ -302,7 +308,7 @@ export const PhotoDateRangeFilter = ({
 
       <div className="mt-1 flex items-baseline justify-between gap-2 text-xs">
         <span className="font-medium text-slate-700">{rangeLabel}</span>
-        {isAllDates ? null : (
+        {isAllDates || !allDatesAction ? null : (
           <button
             className="shrink-0 font-medium text-slate-600 underline decoration-slate-300 underline-offset-2 hover:text-slate-900"
             onClick={() => {
