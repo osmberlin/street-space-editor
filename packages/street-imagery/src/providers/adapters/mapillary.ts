@@ -1,8 +1,15 @@
 import type { Feature } from 'geojson'
+import { peekStreetImageryConfig } from '../../config'
 import type { ViewpointPhotoSource } from '../../viewpoints/photoSources'
 import { pointLngLat } from '../fetchMvt'
-import { fetchMapillaryMvtTiles } from '../mapillaryShared'
-import type { Bbox, NormalizedPhoto, NormalizedSequence, ProviderAdapter } from '../model'
+import { fetchMapillaryMvtTiles, mapillaryTileUrlTemplate } from '../mapillaryShared'
+import type {
+  Bbox,
+  NormalizedPhoto,
+  NormalizedSequence,
+  ProviderAdapter,
+  SequenceTiles,
+} from '../model'
 
 const MVT_PATH = 'mly1_public'
 
@@ -91,10 +98,23 @@ const fetchSequences = async (bbox: Bbox, _zoom: number, signal: AbortSignal) =>
   return sequences
 }
 
+// The tiles have the `sequence` layer from zoom 6 to 14 (below 6 only a point `overview`).
+const sequenceTiles = (): SequenceTiles | null =>
+  peekStreetImageryConfig()
+    ? {
+        tiles: [mapillaryTileUrlTemplate(MVT_PATH)],
+        sourceLayer: 'sequence',
+        minZoom: 6,
+        maxZoom: 14,
+        properties: { capturedAt: 'captured_at', isPano: 'is_pano' },
+      }
+    : null
+
 export const mapillaryAdapter: ProviderAdapter = {
   id: 'mapillary',
   fetchPhotos,
   fetchSequences,
+  sequenceTiles,
 }
 
 /** Search radius of `mapillaryTilePhotoSource`; the ranking keeps photos within 50 m. */

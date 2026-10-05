@@ -18,7 +18,15 @@ const withinBbox = (bbox: Bbox) => (item: { lngLat: [number, number] }) => {
   return lng >= bbox[0] && lng <= bbox[2] && lat >= bbox[1] && lat <= bbox[3]
 }
 
-export const useProviderPhotos = (providerId: ProviderId, bbox: Bbox | null, zoom: number) => {
+/** Host limit on top of the provider's own minimum zooms: below it nothing is requested. */
+type ProviderDataOptions = { minZoom?: number }
+
+export const useProviderPhotos = (
+  providerId: ProviderId,
+  bbox: Bbox | null,
+  zoom: number,
+  { minZoom = 0 }: ProviderDataOptions = {},
+) => {
   // No adapter registered for the provider: nothing to load.
   const adapter = adapterById[providerId]
   const meta = providerById[providerId]
@@ -26,7 +34,7 @@ export const useProviderPhotos = (providerId: ProviderId, bbox: Bbox | null, zoo
     meta.kind === 'photo' &&
     bbox != null &&
     providerCoversBbox(providerId, bbox) &&
-    zoom >= meta.minZoom &&
+    zoom >= Math.max(meta.minZoom, minZoom) &&
     adapter?.fetchPhotos != null
 
   return useQuery({
@@ -40,7 +48,12 @@ export const useProviderPhotos = (providerId: ProviderId, bbox: Bbox | null, zoo
   })
 }
 
-export const useProviderSequences = (providerId: ProviderId, bbox: Bbox | null, zoom: number) => {
+export const useProviderSequences = (
+  providerId: ProviderId,
+  bbox: Bbox | null,
+  zoom: number,
+  { minZoom = 0 }: ProviderDataOptions = {},
+) => {
   // No adapter registered for the provider: nothing to load.
   const adapter = adapterById[providerId]
   const meta = providerById[providerId]
@@ -49,7 +62,7 @@ export const useProviderSequences = (providerId: ProviderId, bbox: Bbox | null, 
     meta.kind === 'photo' &&
     bbox != null &&
     providerCoversBbox(providerId, bbox) &&
-    zoom >= sequencesMinZoom &&
+    zoom >= Math.max(sequencesMinZoom, minZoom) &&
     adapter?.fetchSequences != null
 
   return useQuery({
@@ -60,7 +73,12 @@ export const useProviderSequences = (providerId: ProviderId, bbox: Bbox | null, 
   })
 }
 
-export const useProviderMapFeatures = (providerId: ProviderId, bbox: Bbox | null, zoom: number) => {
+export const useProviderMapFeatures = (
+  providerId: ProviderId,
+  bbox: Bbox | null,
+  zoom: number,
+  { minZoom = 0 }: ProviderDataOptions = {},
+) => {
   // No adapter registered for the provider: nothing to load.
   const adapter = adapterById[providerId]
   const meta = providerById[providerId]
@@ -68,7 +86,7 @@ export const useProviderMapFeatures = (providerId: ProviderId, bbox: Bbox | null
     meta.kind === 'mapFeature' &&
     bbox != null &&
     providerCoversBbox(providerId, bbox) &&
-    zoom >= meta.minZoom &&
+    zoom >= Math.max(meta.minZoom, minZoom) &&
     adapter?.fetchMapFeatures != null
 
   return useQuery({

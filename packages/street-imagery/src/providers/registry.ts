@@ -49,3 +49,7 @@ export const photoSourceId = (providerId: ProviderId) => `photos-source-${provid
 export const featureSourceId = (providerId: ProviderId) => `features-source-${providerId}`
 export const sequenceSourceId = (providerId: ProviderId) => `sequences-source-${providerId}`
 export const viewfieldSourceId = (providerId: ProviderId) => `viewfields-source-${providerId}`
+/** Track lines from the provider's vector tiles, drawn below `sequencesMinZoom`. */
+export const sequenceTilesLayerId = (providerId: ProviderId) => `sequence-tiles-${providerId}`
+export const sequenceTilesSourceId = (providerId: ProviderId) =>
+  `sequence-tiles-source-${providerId}`

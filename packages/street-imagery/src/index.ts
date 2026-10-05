@@ -28,6 +28,7 @@ export {
 export * from './filters/dateSlider'
 export { alignLineToPoints } from './map/alignLine'
 export * from './map/ageSteps'
+export { renameExpressionProperties } from './map/renameExpressionProperties'
 export * from './map/styleColors'
 export {
   coneRadiusMeters,

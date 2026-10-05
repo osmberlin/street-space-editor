@@ -41,6 +41,7 @@ const bbox = useMapViewportBbox('main', map)
     photoCircleColor: '#3b82f6',
     mapFeatureCircleColor: '#94a3b8',
     beforeId: 'road-label', // optional: draw everything below this layer of your style
+    minZoom: 10, // optional: below this zoom nothing is requested or drawn
   }}
 />
 
@@ -50,6 +51,8 @@ const hits = queryStreetImageryFeatures(event)
 <StreetLevelImageryViewer photo={selectedPhoto} groupPhotos={sequencePhotos}
   onPhotoSelected={setSelection} onEaseMapToPoint={(lng, lat) => map.easeTo({ center: [lng, lat] })} />
 ```
+
+**Zoomed out:** below a provider's zoom for lines (Mapillary: 12), MapLibre reads the provider's own vector tiles for the track lines, where it has them (Mapillary: from zoom 6). Same colours and filters; the lines are not clickable. These tiles are large in dense areas (several MB each); set `options.minZoom` to skip them.
 
 **Mapillary:** `createStreetImageryConfig({ mapillaryToken })` or `setStreetImageryConfig` at boot (`@osm-editor-kit/street-imagery`). **Panoramax + Vite:** see `app/vite.config.ts` for the consuming-app setup.
 

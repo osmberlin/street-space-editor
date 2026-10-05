@@ -13,6 +13,12 @@ export const mapillaryTileUrl = (path: string, tile: TileCoord) => {
   return `https://tiles.mapillary.com/maps/vtp/${path}/2/${tile.z}/${tile.x}/${tile.y}?access_token=${token}`
 }
 
+/** Tile URL template (`{z}`, `{x}`, `{y}`) for a MapLibre `vector` source. */
+export const mapillaryTileUrlTemplate = (path: string) => {
+  const token = getStreetImageryConfig().mapillaryToken
+  return `https://tiles.mapillary.com/maps/vtp/${path}/2/{z}/{x}/{y}?access_token=${token}`
+}
+
 export const fetchMapillaryMvtTiles = async (
   cachePrefix: string,
   path: string,

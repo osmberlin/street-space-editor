@@ -27,6 +27,9 @@ import {
   photoSourceId,
   sequenceLayerId,
   sequenceSourceId,
+  sequenceTilesLayerId,
+  sequenceTilesSourceId,
+  renameExpressionProperties,
   viewfieldLayerId,
   viewfieldLineLayerId,
   viewfieldSourceId,
@@ -75,6 +78,7 @@ type ProviderLayerProps = {
   /** The shown photo, when it is this provider's. */
   shownPhotoId?: string | null
   beforeId?: string
+  minZoom: number
 }
 
 const FEATURE_CIRCLE_RADIUS: ['interpolate', ['linear'], ['zoom'], ...number[]] = [
@@ -140,14 +144,17 @@ const PhotoProviderLayer = ({
   hasActiveSequence,
   shownPhotoId,
   beforeId,
+  minZoom,
 }: ProviderLayerProps) => {
   const adapter = adapterById[providerId]
   const meta = providerById[providerId]
-  const { data: photos = [] } = useProviderPhotos(providerId, bbox, zoom)
-  const { data: sequences = [] } = useProviderSequences(providerId, bbox, zoom)
+  const photosMinZoom = Math.max(meta.minZoom, minZoom)
+  const sequencesMinZoom = Math.max(meta.sequencesMinZoom, minZoom)
+  const { data: photos = [] } = useProviderPhotos(providerId, bbox, zoom, { minZoom })
+  const { data: sequences = [] } = useProviderSequences(providerId, bbox, zoom, { minZoom })
 
   const visiblePhotos =
-    zoom >= meta.minZoom
+    zoom >= photosMinZoom
       ? photos.filter((photo) => photoMatchesFilters(photo, filter?.photoTypes, filter?.date))
       : []
 
@@ -155,7 +162,7 @@ const PhotoProviderLayer = ({
   // areas stay fast (the layer filter below still applies for style-only changes).
   const drawBbox = bbox ? padBbox(bbox, 0.25) : null
   const photoCollection =
-    zoom >= meta.minZoom
+    zoom >= photosMinZoom
       ? photosToFeatureCollection(
           drawBbox
             ? visiblePhotos.filter((photo) => lngLatInBbox(photo.lngLat, drawBbox))
@@ -226,7 +233,7 @@ const PhotoProviderLayer = ({
   }
 
   const filteredSequences =
-    showSequences && zoom >= meta.sequencesMinZoom
+    showSequences && zoom >= sequencesMinZoom
       ? sequences
           .map((sequence) => {
             if (sequence.capturedAt != null) return sequence
@@ -279,6 +286,11 @@ const PhotoProviderLayer = ({
     }
   })
 
+  // Zoomed out, one tile holds tens of thousands of lines: MapLibre reads the provider's tiles
+  // itself there. The lines above take over from `meta.sequencesMinZoom`.
+  const sequenceTiles = showSequences ? adapter?.sequenceTiles?.() : null
+  const sequenceTilesMinZoom = sequenceTiles ? Math.max(sequenceTiles.minZoom, minZoom) : 0
+
   const sequenceCollection =
     alignedSequences.length > 0
       ? sequencesToFeatureCollection(alignedSequences)
@@ -302,6 +314,38 @@ const PhotoProviderLayer = ({
             paint={{ 'raster-opacity': 0.7 }}
             source={`coverage-tiles-source-${providerId}`}
             type="raster"
+          />
+        </>
+      ) : null}
+      {sequenceTiles && sequenceTilesMinZoom < meta.sequencesMinZoom ? (
+        <>
+          <Source
+            key={sequenceTilesSourceId(providerId)}
+            id={sequenceTilesSourceId(providerId)}
+            type="vector"
+            tiles={sequenceTiles.tiles}
+            minzoom={sequenceTiles.minZoom}
+            maxzoom={sequenceTiles.maxZoom}
+          />
+          <Layer
+            beforeId={beforeId}
+            id={sequenceTilesLayerId(providerId)}
+            type="line"
+            source={sequenceTilesSourceId(providerId)}
+            source-layer={sequenceTiles.sourceLayer}
+            minzoom={sequenceTilesMinZoom}
+            maxzoom={meta.sequencesMinZoom}
+            filter={renameExpressionProperties(photoFilter, sequenceTiles.properties)}
+            layout={{
+              'line-cap': 'round',
+              'line-join': 'round',
+              'line-sort-key': ['coalesce', ['get', sequenceTiles.properties.capturedAt], 0],
+            }}
+            paint={{
+              'line-color': renameExpressionProperties(photoCircleColor, sequenceTiles.properties),
+              'line-width': 1.25,
+              'line-opacity': hasActiveSequence ? 0.45 : 1,
+            }}
           />
         </>
       ) : null}
@@ -398,13 +442,14 @@ const MapFeatureProviderLayer = ({
   filter,
   mapFeatureCircleColor,
   beforeId,
+  minZoom,
 }: ProviderLayerProps) => {
   const meta = providerById[providerId]
-  const { data: features = [] } = useProviderMapFeatures(providerId, bbox, zoom)
+  const { data: features = [] } = useProviderMapFeatures(providerId, bbox, zoom, { minZoom })
 
   const valueFilter = filter?.mapFeatureValue
   const featureCollection =
-    zoom >= meta.minZoom
+    zoom >= Math.max(meta.minZoom, minZoom)
       ? mapFeaturesToFeatureCollection(
           valueFilter ? features.filter((feature) => valueFilter(feature.value)) : features,
         )
@@ -480,6 +525,11 @@ export type StreetLevelImagerySourcesAndLayersProps = {
      * The layer must exist when this component mounts. Default: on top of the style.
      */
     beforeId?: string
+    /**
+     * Below this map zoom nothing is requested or drawn. Each provider also has its own minimum
+     * zooms (photos, lines); the higher one counts. Default: only the providers' own.
+     */
+    minZoom?: number
   }
 }
 
@@ -504,6 +554,7 @@ export const StreetLevelImagerySourcesAndLayers = ({
     photoCircleColor,
     mapFeatureCircleColor,
     beforeId,
+    minZoom = 0,
   } = options
 
   useEffect(
@@ -545,6 +596,7 @@ export const StreetLevelImagerySourcesAndLayers = ({
         <Fragment key={providerId}>
           <ProviderLayer
             beforeId={beforeId}
+            minZoom={minZoom}
             bbox={bbox}
             filter={filter}
             mapFeatureCircleColor={mapFeatureCircleColor}
