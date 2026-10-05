@@ -1,5 +1,17 @@
 # @osm-editor-kit/street-imagery
 
+## 0.1.0-alpha.8
+
+### Patch Changes
+
+- b7b89e7: - **Mapillary lines when zoomed out, and far less to download**: `StreetLevelImagerySourcesAndLayers` now shows Mapillary's track lines from zoom 6 (before: 12). Until photos are loaded (zoom 15), MapLibre reads Mapillary's line tiles itself, with the same colours and filters. Before, zoom 12 to 14 loaded the photo tiles for this: up to 96 tiles of over 10 MB each in a city view at zoom 12. Zoomed far out, the line tiles are several MB each in dense areas. `providerById.mapillary.sequencesMinZoom` is now 6; `fetchedSequencesMinZoom(providerId)` gives the zoom from which `fetchSequences` is used.
+  - **Limit the zoom**: `options.minZoom` — below it nothing is requested or drawn, on top of each provider's own minimum zooms. `useProviderPhotos`, `useProviderSequences` and `useProviderMapFeatures` take the same as a fourth argument, `{ minZoom }`.
+  - For own adapters: `ProviderAdapter.sequenceTiles` (type `SequenceTiles`) names vector tiles for low zooms; `renameExpressionProperties` runs a style expression on other property names; `sequenceTilesLayerId` / `sequenceTilesSourceId`.
+- 9e014d6: - **Memory has a limit when panning through a city**: the tile cache now also counts what the tiles hold (photos, lines) and keeps at most 800,000 items, about 400 MB. Before it kept 60 tiles, whatever their size; a Mapillary tile of a city centre holds about 180,000 photos. `fetchTileCached` takes an optional `countItems` for values that are not arrays.
+  - Mapillary photos are kept as they are used, not as the tile's GeoJSON, so nothing is converted again on each pan.
+- 6cd4ff6: - **Photos are easier to click**: an invisible circle of 10 px radius around each photo dot takes clicks and taps near it; the dots themselves are 2 to 4 px. It is part of `streetImageryInteractiveLayerIds`, and `queryStreetImageryFeatures` returns its hits after those on the dot itself. Layer id: `photoTargetLayerId(providerId)`.
+- 045a3a8: - **Street View: outdoor panoramas only**: the metadata lookup (`fetchStreetViewMetadata`, so `streetViewPhotoSource` and the Street View `lookAtUrl`) asks Google for `source=outdoor`. It no longer returns photo spheres taken inside buildings. Needs `googleMapsApiKey`; the plain link without a key cannot be limited.
+
 ## 0.1.0-alpha.7
 
 ### Patch Changes

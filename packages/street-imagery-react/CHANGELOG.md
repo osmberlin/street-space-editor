@@ -1,5 +1,28 @@
 # @osm-editor-kit/street-imagery-react
 
+## 0.1.0-alpha.9
+
+### Patch Changes
+
+- 9220e21: - **Floating viewer at the top left**: `defaultPosition={{ corner: 'top-left', left, top }}` on `FloatingPhotoViewer` places the box there until the user moves it, e.g. next to a side panel. Default stays the bottom right corner.
+  - **Floating viewer without history**: `onBack`, `onForward`, `canGoBack` and `canGoForward` are optional on `FloatingPhotoViewer`; without the handlers the back and forward buttons are not shown.
+- f33c592: - **Draw the imagery below a layer of your style**: `options.beforeId` on `StreetLevelImagerySourcesAndLayers` puts all its layers (lines, view shapes, dots, signs, the shown photo's cone and marker) below that layer, e.g. below road names. The layer must exist when the component mounts. Without it, nothing changes. `StreetLevelImageryViewCone` and `StreetLevelImagerySelectionOverlay` take the same `beforeId`.
+- b7b89e7: - **Mapillary lines when zoomed out, and far less to download**: `StreetLevelImagerySourcesAndLayers` now shows Mapillary's track lines from zoom 6 (before: 12). Until photos are loaded (zoom 15), MapLibre reads Mapillary's line tiles itself, with the same colours and filters. Before, zoom 12 to 14 loaded the photo tiles for this: up to 96 tiles of over 10 MB each in a city view at zoom 12. Zoomed far out, the line tiles are several MB each in dense areas. `providerById.mapillary.sequencesMinZoom` is now 6; `fetchedSequencesMinZoom(providerId)` gives the zoom from which `fetchSequences` is used.
+  - **Limit the zoom**: `options.minZoom` — below it nothing is requested or drawn, on top of each provider's own minimum zooms. `useProviderPhotos`, `useProviderSequences` and `useProviderMapFeatures` take the same as a fourth argument, `{ minZoom }`.
+  - For own adapters: `ProviderAdapter.sequenceTiles` (type `SequenceTiles`) names vector tiles for low zooms; `renameExpressionProperties` runs a style expression on other property names; `sequenceTilesLayerId` / `sequenceTilesSourceId`.
+- bbbebe2: - **View cone of a flat Mapillary photo points the right way**: it used the heading of the map tiles (the camera's own compass, often far off) and now follows the viewer, which reports the direction Mapillary computed from the image, as on mapillary.com. Width follows the viewer's field of view.
+- 004515e: - **Panoramax without its own widgets**: with `hideAttribution` (`hideLegend` on `PanoramaxPanel`) the viewer no longer creates its legend, bottom drawer, player and zoom buttons at all (`widgets="false"`). Before they were created and hidden with CSS, and the drawer could still show.
+- 6cd4ff6: - **Photos are easier to click**: an invisible circle of 10 px radius around each photo dot takes clicks and taps near it; the dots themselves are 2 to 4 px. It is part of `streetImageryInteractiveLayerIds`, and `queryStreetImageryFeatures` returns its hits after those on the dot itself. Layer id: `photoTargetLayerId(providerId)`.
+- 10967b3: - **Photo counts with thousands separators**: the date filter's tooltips show "7,664 photos" / "7.664 Fotos" instead of "7664".
+  - **Date filter marks on a logarithmic scale**: the first bar holds all photos older than the slider spans and dwarfed the others; small bars are now readable next to it.
+  - **Date filter without the "All dates" action**: `allDatesAction={false}` on `PhotoDateRangeFilter` hides it, for hosts with little room.
+- aa31a76: - **The viewers load only when a photo is shown**: the main entry no longer imports `mapillary-js` and `@panoramax/web-viewer`. Before, any import from the package loaded both, although `StreetLevelImageryViewer` loads its panels on demand. **Breaking**: `MapillaryPanel`, `PanoramaxPanel`, `mapillaryViewFor`, `setMapillaryViewerOutlines` and `turnMapillaryViewerTo` are now in `@osm-editor-kit/street-imagery-react/viewer-panels`.
+- Updated dependencies [b7b89e7]
+- Updated dependencies [9e014d6]
+- Updated dependencies [6cd4ff6]
+- Updated dependencies [045a3a8]
+  - @osm-editor-kit/street-imagery@0.1.0-alpha.8
+
 ## 0.1.0-alpha.8
 
 ### Patch Changes

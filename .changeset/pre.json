@@ -25,6 +25,15 @@
   "changesets": [
     "date-slider-scale",
     "gentle-tidy-anchors",
+    "imagery-floating-viewer-default-position",
+    "imagery-layers-before-id",
+    "imagery-low-zoom-lines",
+    "imagery-mapillary-cone-direction",
+    "imagery-panoramax-no-widgets",
+    "imagery-photo-cache-limit",
+    "imagery-photo-click-target",
+    "imagery-photo-count-format",
+    "imagery-viewer-panels-entry",
     "installable-kit-packages",
     "kartaview-small-tiles",
     "locale-en-de",
@@ -37,6 +46,7 @@
     "selected-map-feature",
     "sign-groups-age-steps",
     "street-views-buttons",
+    "streetview-outdoor",
     "viewpoint-photo-finder"
   ]
 }
