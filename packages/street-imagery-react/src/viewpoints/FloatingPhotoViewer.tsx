@@ -18,6 +18,14 @@ const DEFAULT_LAYOUT: Layout = { right: 16, bottom: 32, width: 420, minimized: f
 const MIN_WIDTH = 280
 const EDGE = 8
 
+const hasStoredLayout = (storageKey: string): boolean => {
+  try {
+    return localStorage.getItem(storageKey) != null
+  } catch {
+    return false
+  }
+}
+
 const readLayout = (storageKey: string): Layout => {
   try {
     const raw = localStorage.getItem(storageKey)
@@ -231,6 +239,11 @@ export type FloatingPhotoViewerProps = {
   drawer?: { label: ReactNode; content: ReactNode }
   /** localStorage key for position, width and minimized state. */
   storageKey?: string
+  /**
+   * Where the box is until the user moves it: the bottom right corner (default), or the top left
+   * one with `left` and `top` in px from the container's edges, e.g. next to a side panel.
+   */
+  defaultPosition?: { corner: 'top-left'; left?: number; top?: number }
 }
 
 /**
@@ -257,12 +270,19 @@ export const FloatingPhotoViewer = ({
   footer,
   drawer,
   storageKey = 'street-imagery:floating-viewer',
+  defaultPosition,
 }: FloatingPhotoViewerProps) => {
   const { messages } = useStreetImageryI18n()
   const severalViewpoints =
     new Set(suggestions.map((suggestion) => suggestion.viewpoint.id)).size > 1
   const [layout, setLayout] = useState<Layout>(() => readLayout(storageKey))
   const [drawerOpen, setDrawerOpen] = useState(false)
+  // Until the user has moved the box (now or in an earlier visit) it sits at `defaultPosition`.
+  const [moved, setMoved] = useState(() => hasStoredLayout(storageKey))
+  const atTopLeft = defaultPosition?.corner === 'top-left' && !moved
+  const position = atTopLeft
+    ? { left: defaultPosition.left ?? EDGE, top: defaultPosition.top ?? EDGE }
+    : { right: layout.right, bottom: layout.bottom }
   const dragRef = useRef<{
     x: number
     y: number
@@ -306,7 +326,20 @@ export const FloatingPhotoViewer = ({
       return
     }
     event.currentTarget.setPointerCapture(event.pointerId)
-    dragRef.current = { x: event.clientX, y: event.clientY, layout, mode }
+    // The layout counts from the bottom right: take over where the box is now.
+    const box = event.currentTarget.closest('section')
+    const container = box?.offsetParent
+    const start =
+      atTopLeft && box && container
+        ? {
+            ...layout,
+            right: container.clientWidth - box.offsetLeft - box.offsetWidth,
+            bottom: container.clientHeight - box.offsetTop - box.offsetHeight,
+          }
+        : layout
+    setLayout(start)
+    setMoved(true)
+    dragRef.current = { x: event.clientX, y: event.clientY, layout: start, mode }
   }
 
   const onDrag = (event: PointerEvent<HTMLElement>) => {
@@ -341,7 +374,7 @@ export const FloatingPhotoViewer = ({
       <button
         className="absolute z-10 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-medium text-slate-800 shadow-lg ring-1 ring-slate-200 hover:bg-slate-50"
         onClick={() => updateLayout({ ...layout, minimized: false })}
-        style={{ right: layout.right, bottom: layout.bottom }}
+        style={position}
         type="button"
       >
         <Icon path={ICONS.expand} />
@@ -355,8 +388,7 @@ export const FloatingPhotoViewer = ({
       aria-label={messages.viewer.regionLabel}
       className="absolute z-10 flex max-h-[calc(100%-1rem)] flex-col overflow-hidden rounded-xl bg-white shadow-xl ring-1 ring-slate-200"
       style={{
-        right: layout.right,
-        bottom: layout.bottom,
+        ...position,
         width: `min(${layout.width}px, calc(100% - 1rem))`,
       }}
     >
