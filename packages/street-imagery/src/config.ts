@@ -65,5 +65,9 @@ export const getStreetImageryConfig = (): StreetImageryConfig => {
   return activeConfig
 }
 
+/** The Panoramax server of the config; the public one when the host set no config. */
+export const getPanoramaxApiBase = (): string =>
+  activeConfig?.panoramaxApiBase ?? DEFAULT_PANORAMAX_API_BASE
+
 /** Like `getStreetImageryConfig`, but `null` instead of throwing when nothing is configured. */
 export const peekStreetImageryConfig = (): StreetImageryConfig | null => activeConfig

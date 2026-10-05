@@ -112,7 +112,7 @@ const photoCircleColor = ageStepColorExpression(steps)
 
 ## Open a place in another service
 
-`getLocationOpeners()` / `findLocationOpener(id)` give one opener per service: the photo providers (`LOCATION_OPENERS`) plus one per configured infra3D project (id `infra3d:<project uid>`). Each has `locationUrl(target)`, a plain link that works as an `<a href>`, and where the service allows it `lookAtUrl(target)`, which finds the nearest image and turns it to the place (Mapillary; Google Street View with `googleMapsApiKey`). `openLocationInNewTab(opener, target)` opens the tab first and then resolves the look-at link, so popup blockers let it through; call it directly in a click handler.
+`getLocationOpeners()` / `findLocationOpener(id)` give one opener per service: the photo providers (`LOCATION_OPENERS`) plus one per configured infra3D project (id `infra3d:<project uid>`). Each has `locationUrl(target)`, a plain link that works as an `<a href>`, and where the service allows it `lookAtUrl(target)`, which finds the nearest image and turns it to the place (Mapillary; Google Street View with `googleMapsApiKey`). `openLocationInNewTab(opener, target)` opens the tab first and then resolves the look-at link, so popup blockers let it through; call it directly in a click handler. The links need no config; the Panoramax ones go to the public server unless the config names another (`getPanoramaxApiBase()`).
 
 ```ts
 import { findLocationOpener, openLocationInNewTab } from '@osm-editor-kit/street-imagery'

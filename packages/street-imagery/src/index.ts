@@ -1,5 +1,6 @@
 export {
   createStreetImageryConfig,
+  getPanoramaxApiBase,
   getStreetImageryConfig,
   peekStreetImageryConfig,
   setStreetImageryConfig,

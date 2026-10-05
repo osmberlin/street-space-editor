@@ -1,4 +1,4 @@
-import { getStreetImageryConfig } from '../config'
+import { getPanoramaxApiBase } from '../config'
 import { lookAroundDeepLink } from '../providers/adapters/lookaround'
 import type { NormalizedPhoto, ProviderId } from '../providers/model'
 
@@ -9,7 +9,7 @@ export const providerExternalLink = (photo: NormalizedPhoto): string => {
     case 'mapillary':
       return `https://www.mapillary.com/app/?pKey=${encodeURIComponent(photo.photoId)}&focus=photo`
     case 'panoramax':
-      return `${getStreetImageryConfig().panoramaxApiBase}/#pic=${encodeURIComponent(photo.photoId)}&focus=pic`
+      return `${getPanoramaxApiBase()}/#pic=${encodeURIComponent(photo.photoId)}&focus=pic`
     case 'kartaview':
       if (photo.sequenceId != null && photo.sequenceIndex != null) {
         return `https://kartaview.org/details/${encodeURIComponent(photo.sequenceId)}/${photo.sequenceIndex}`
@@ -47,7 +47,7 @@ export const providerLocationLink = (
     case 'mapillary-map-features':
       return `https://www.mapillary.com/app/?lat=${lat}&lng=${lng}&z=17&focus=map`
     case 'panoramax':
-      return `${getStreetImageryConfig().panoramaxApiBase}/?focus=map&map=${zoom}/${lat}/${lng}`
+      return `${getPanoramaxApiBase()}/?focus=map&map=${zoom}/${lat}/${lng}`
     case 'kartaview':
       return `https://kartaview.org/map/@${lat},${lng},${zoom}z`
     case 'mapilio':
