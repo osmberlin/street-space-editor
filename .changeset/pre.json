@@ -23,14 +23,19 @@
     "@osm-editor-kit/street-imagery-react": "0.0.0"
   },
   "changesets": [
+    "date-slider-scale",
     "gentle-tidy-anchors",
     "installable-kit-packages",
     "kartaview-small-tiles",
     "locale-en-de",
     "location-openers",
     "mapillary-features-look-at",
+    "opener-links-account-date",
+    "photo-date-range-filter",
     "providers-per-entry",
     "registry-metadata-fix",
+    "selected-map-feature",
+    "sign-groups-age-steps",
     "street-views-buttons",
     "viewpoint-photo-finder"
   ]

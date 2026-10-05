@@ -1,5 +1,17 @@
 # @osm-editor-kit/street-imagery-react
 
+## 0.1.0-alpha.8
+
+### Patch Changes
+
+- 9880126: - **`PhotoDateRangeFilter`**: a date filter with two handles, marks that show how many photos there are at each time (`capturedAt`), lines at whole years whose labels set "the last N years" (`yearLines`), a red line for `recommendedMaxAgeYears`, dashed lines with a label for fixed dates (`markers`), and date inputs for exact days that are folded away, open or left out (`dateInputs`). New texts in `messages.dateFilter` (English, German).
+- 20ee7ad: - `useSelectedMapillaryFeature`: a selected sign with its photos, the shown one and the one to open first.
+  - `SelectedMapFeatureLayer`: the selected sign's halo and a line from the camera of the shown photo.
+- Updated dependencies [20ee7ad]
+- Updated dependencies [b2944a8]
+- Updated dependencies [6ff52b7]
+  - @osm-editor-kit/street-imagery@0.1.0-alpha.7
+
 ## 0.1.0-alpha.7
 
 ### Patch Changes
