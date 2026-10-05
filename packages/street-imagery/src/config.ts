@@ -1,3 +1,5 @@
+import type { Bbox } from './providers/model'
+
 export type StreetImageryConfig = {
   mapillaryToken: string
   panoramaxApiBase: string
@@ -21,10 +23,14 @@ export type StreetImageryConfig = {
   infra3d?: Infra3dConfig
 }
 
-/** One infra3D project the host links to: the id of the URL (`projectUID`) and a name to show. */
+/** One infra3D project the host links to. The package knows no projects of its own. */
 export type Infra3dProject = {
+  /** The `projectUID` of the infra3D URL. */
   uid: string
-  name: string
+  /** The opener's label, shown as it is, e.g. "infra3D Berlin". */
+  label: string
+  /** The only area the project has imagery in. Unset: the opener covers every place. */
+  bbox?: Bbox
 }
 
 export type Infra3dConfig = {

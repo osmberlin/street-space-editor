@@ -1,18 +1,19 @@
 import { beforeAll, describe, expect, it } from 'bun:test'
 import { createStreetImageryConfig, setStreetImageryConfig } from '../config'
-import type { NormalizedPhoto } from '../providers/model'
+import type { Bbox, NormalizedPhoto } from '../providers/model'
 import { destinationPoint, type LngLat } from '../viewpoints/geometry'
 import {
   findLocationOpener,
   getLocationOpeners,
+  getLocationOpenersAt,
   mapillaryLookAtUrl,
   streetViewLookAtUrl,
 } from './locationOpeners'
 
 const PROJECT = 'ec2428b7-8e49-4d93-80a0-edfec6da1cf3'
 const PROJECTS = [
-  { uid: PROJECT, name: 'Berlin' },
-  { uid: 'second-project', name: 'Hamburg 2024' },
+  { uid: PROJECT, label: 'infra3D Berlin', bbox: [13.08, 52.33, 13.77, 52.68] as Bbox },
+  { uid: 'second-project', label: 'Hamburg 2024' },
 ]
 const target: LngLat = [13.38886, 52.51704]
 
@@ -55,12 +56,9 @@ describe('getLocationOpeners', () => {
     }
   })
 
-  it('has one infra3D opener per project, named after it', () => {
+  it('has one infra3D opener per project, with the label of the config', () => {
     const openers = getLocationOpeners().filter((opener) => opener.id.startsWith('infra3d:'))
-    expect(openers.map((opener) => opener.label)).toEqual([
-      'infra3D Berlin',
-      'infra3D Hamburg 2024',
-    ])
+    expect(openers.map((opener) => opener.label)).toEqual(['infra3D Berlin', 'Hamburg 2024'])
     const url = new URL(openers[1]?.locationUrl({ lngLat: target }) ?? '')
     expect(url.searchParams.get('projectUID')).toBe('second-project')
   })
@@ -74,6 +72,20 @@ describe('getLocationOpeners', () => {
       northing: target[1],
       epsg: 4326,
     })
+  })
+
+  it('offers an opener only where it has imagery', () => {
+    const idsAt = (lngLat: LngLat) => getLocationOpenersAt(lngLat).map((opener) => opener.id)
+    const oslo: LngLat = [10.75, 59.91]
+
+    expect(idsAt(target)).toContain(`infra3d:${PROJECT}`)
+    expect(idsAt(target)).not.toContain('vegbilder')
+
+    expect(idsAt(oslo)).not.toContain(`infra3d:${PROJECT}`)
+    expect(idsAt(oslo)).toContain('vegbilder')
+    // A project without a bbox covers every place.
+    expect(idsAt(oslo)).toContain('infra3d:second-project')
+    expect(idsAt(oslo)).toContain('mapillary')
   })
 
   it('marks only infra3D as needing an account', () => {

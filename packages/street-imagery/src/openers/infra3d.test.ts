@@ -10,7 +10,9 @@ const configure = (projectUid?: string) => {
   setStreetImageryConfig(
     createStreetImageryConfig({
       mapillaryToken: 'test-token',
-      infra3d: projectUid ? { projects: [{ uid: projectUid, name: 'Berlin' }] } : undefined,
+      infra3d: projectUid
+        ? { projects: [{ uid: projectUid, label: 'infra3D Berlin' }] }
+        : undefined,
     }),
   )
 }

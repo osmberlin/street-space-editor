@@ -8,7 +8,7 @@ import {
   type TargetImage,
 } from '../mapillary/targetView'
 import { fetchStreetViewMetadata, getGoogleMapsApiKey } from '../providers/adapters/streetview'
-import type { NormalizedPhoto, ProviderId } from '../providers/model'
+import type { Bbox, NormalizedPhoto, ProviderId } from '../providers/model'
 import { providerById } from '../providers/registry'
 import { providerLocationLink } from '../viewer/externalLinks'
 import { angleDiffDeg, bearingDeg, type LngLat } from '../viewpoints/geometry'
@@ -58,6 +58,11 @@ export type LocationOpener = {
   /** `false` when the host config lacks what the service needs. */
   isAvailable: () => boolean
   /**
+   * `false` when the service has no imagery at the place (Vegbilder outside Norway, an infra3D
+   * project outside its `bbox`); hide the link then. Services without a known area cover all.
+   */
+  covers: (lngLat: LngLat) => boolean
+  /**
    * `true` when the service shows its images only to people with an account (infra3D): everyone
    * else lands on its login page. Mark such links, e.g. with a lock icon.
    */
@@ -73,6 +78,10 @@ export type LocationOpener = {
 
 /** Flat images must point at the target within this many degrees to show it. */
 const MAX_FLAT_ANGLE_DEG = 40
+
+/** Without a bbox every place is inside. */
+const bboxContains = (bbox: Bbox | undefined, [lng, lat]: LngLat): boolean =>
+  !bbox || (lng >= bbox[0] && lng <= bbox[2] && lat >= bbox[1] && lat <= bbox[3])
 
 const round = (value: number, digits: number) => Number(value.toFixed(digits))
 
@@ -151,6 +160,7 @@ const providerOpener = (id: (typeof PROVIDER_OPENER_IDS)[number]): LocationOpene
   label: providerById[id].label,
   color: providerById[id].color,
   isAvailable: () => true,
+  covers: (lngLat) => bboxContains(providerById[id].coverage?.bbox, lngLat),
   requiresAccount: false,
   locationUrl: ({ lngLat: [lng, lat], zoom, dateFrom }) =>
     providerLocationLink(id, lat, lng, zoom, { dateFrom }),
@@ -188,11 +198,12 @@ const streetViewOpener: LocationOpener = {
  * nearest image, turned to this point", so the plain link is the look-at link.
  */
 export const infra3dOpeners = (): LocationOpener[] =>
-  getInfra3dProjects().map(({ uid, name }) => ({
+  getInfra3dProjects().map(({ uid, label, bbox }) => ({
     id: `infra3d:${uid}`,
-    label: `infra3D ${name}`,
+    label,
     color: '#0F766E',
     isAvailable: () => true,
+    covers: (lngLat) => bboxContains(bbox, lngLat),
     requiresAccount: true,
     locationUrl: ({ lngLat: [lng, lat] }) =>
       buildInfra3dUrl({ mode: 'lookAt', lng, lat, projectUid: uid }),
@@ -212,6 +223,10 @@ export const LOCATION_OPENERS: LocationOpener[] = [
 
 /** All openers: the photo providers, then one per infra3D project of the config. */
 export const getLocationOpeners = (): LocationOpener[] => [...LOCATION_OPENERS, ...infra3dOpeners()]
+
+/** The openers that have imagery at the place (`covers`) and all they need (`isAvailable`). */
+export const getLocationOpenersAt = (lngLat: LngLat): LocationOpener[] =>
+  getLocationOpeners().filter((opener) => opener.isAvailable() && opener.covers(lngLat))
 
 export const findLocationOpener = (id: LocationOpenerId): LocationOpener | undefined =>
   getLocationOpeners().find((opener) => opener.id === id)
