@@ -34,6 +34,8 @@ export type StreetLevelImagerySelectionOverlayProps = {
   cameraLngLat?: [number, number] | null
   /** Layer to draw the sequence line below, so photo dots stay on top of it. */
   sequenceBeforeId?: string
+  /** Id of a layer of the host's style to draw the whole overlay below. */
+  beforeId?: string
 }
 
 /**
@@ -46,6 +48,7 @@ export const StreetLevelImagerySelectionOverlay = ({
   selectedSequence,
   cameraLngLat,
   sequenceBeforeId,
+  beforeId,
 }: StreetLevelImagerySelectionOverlayProps) => {
   const photoLngLat = selectedPhoto?.lngLat
   const cameraDiffers =
@@ -117,7 +120,7 @@ export const StreetLevelImagerySelectionOverlay = ({
     <>
       <Source id={SEQUENCE_HIGHLIGHT_SOURCE_ID} type="geojson" data={sequenceCollection} />
       <Layer
-        beforeId={sequenceBeforeId}
+        beforeId={sequenceBeforeId ?? beforeId}
         id="sequence-highlight-layer"
         type="line"
         source={SEQUENCE_HIGHLIGHT_SOURCE_ID}
@@ -127,6 +130,7 @@ export const StreetLevelImagerySelectionOverlay = ({
 
       <Source id={CONNECTOR_SOURCE_ID} type="geojson" data={connector} />
       <Layer
+        beforeId={beforeId}
         id="selection-connector-layer"
         type="line"
         source={CONNECTOR_SOURCE_ID}
@@ -136,6 +140,7 @@ export const StreetLevelImagerySelectionOverlay = ({
       <Source id={POINTS_SOURCE_ID} type="geojson" data={points} />
       {/* Covers the photo dot below it. */}
       <Layer
+        beforeId={beforeId}
         id="selection-highlight-layer"
         type="circle"
         source={POINTS_SOURCE_ID}
@@ -148,6 +153,7 @@ export const StreetLevelImagerySelectionOverlay = ({
         }}
       />
       <Layer
+        beforeId={beforeId}
         id="selection-camera-layer"
         type="circle"
         source={POINTS_SOURCE_ID}

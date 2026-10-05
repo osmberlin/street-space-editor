@@ -74,6 +74,7 @@ type ProviderLayerProps = {
   hasActiveSequence: boolean
   /** The shown photo, when it is this provider's. */
   shownPhotoId?: string | null
+  beforeId?: string
 }
 
 const FEATURE_CIRCLE_RADIUS: ['interpolate', ['linear'], ['zoom'], ...number[]] = [
@@ -138,6 +139,7 @@ const PhotoProviderLayer = ({
   activeSequenceId,
   hasActiveSequence,
   shownPhotoId,
+  beforeId,
 }: ProviderLayerProps) => {
   const adapter = adapterById[providerId]
   const meta = providerById[providerId]
@@ -294,6 +296,7 @@ const PhotoProviderLayer = ({
             type="raster"
           />
           <Layer
+            beforeId={beforeId}
             id={`coverage-tiles-${providerId}`}
             minzoom={meta.coverageTiles.minZoom}
             paint={{ 'raster-opacity': 0.7 }}
@@ -311,6 +314,7 @@ const PhotoProviderLayer = ({
             data={sequenceCollection}
           />
           <Layer
+            beforeId={beforeId}
             id={sequenceLayerId(providerId)}
             type="line"
             source={sequenceSourceId(providerId)}
@@ -337,6 +341,7 @@ const PhotoProviderLayer = ({
             data={viewfieldCollection}
           />
           <Layer
+            beforeId={beforeId}
             id={viewfieldLayerId(providerId)}
             type="fill"
             source={viewfieldSrcId}
@@ -349,6 +354,7 @@ const PhotoProviderLayer = ({
           />
           {/* A hairline, just enough to give overlapping shapes an edge. */}
           <Layer
+            beforeId={beforeId}
             id={viewfieldLineLayerId(providerId)}
             type="line"
             source={viewfieldSrcId}
@@ -370,6 +376,7 @@ const PhotoProviderLayer = ({
         promoteId="photoId"
       />
       <Layer
+        beforeId={beforeId}
         id={photoLayerId(providerId)}
         type="circle"
         source={photoSrcId}
@@ -390,6 +397,7 @@ const MapFeatureProviderLayer = ({
   zoom,
   filter,
   mapFeatureCircleColor,
+  beforeId,
 }: ProviderLayerProps) => {
   const meta = providerById[providerId]
   const { data: features = [] } = useProviderMapFeatures(providerId, bbox, zoom)
@@ -415,6 +423,7 @@ const MapFeatureProviderLayer = ({
         promoteId="featureId"
       />
       <Layer
+        beforeId={beforeId}
         id={featureLayerId(providerId)}
         type="circle"
         source={featureSrcId}
@@ -466,6 +475,11 @@ export type StreetLevelImagerySourcesAndLayersProps = {
     /** Length of the shown photo's view cone, as a multiple of the per-photo shapes. Default 2.5. */
     viewConeScale?: number
     mapFeatureCircleColor: DataDrivenPropertyValueSpecification<string>
+    /**
+     * Id of a layer of the host's style: all layers are drawn below it (e.g. below road names).
+     * The layer must exist when this component mounts. Default: on top of the style.
+     */
+    beforeId?: string
   }
 }
 
@@ -489,6 +503,7 @@ export const StreetLevelImagerySourcesAndLayers = ({
     viewConeScale,
     photoCircleColor,
     mapFeatureCircleColor,
+    beforeId,
   } = options
 
   useEffect(
@@ -529,6 +544,7 @@ export const StreetLevelImagerySourcesAndLayers = ({
       {providers.map((providerId) => (
         <Fragment key={providerId}>
           <ProviderLayer
+            beforeId={beforeId}
             bbox={bbox}
             filter={filter}
             mapFeatureCircleColor={mapFeatureCircleColor}
@@ -548,6 +564,7 @@ export const StreetLevelImagerySourcesAndLayers = ({
 
       {showViewCone && selectedPhoto ? (
         <StreetLevelImageryViewCone
+          beforeId={beforeId}
           color={viewConeColor ?? SELECTION_COLOR}
           scale={viewConeScale}
           selectedPhoto={selectedPhoto}
@@ -558,6 +575,7 @@ export const StreetLevelImagerySourcesAndLayers = ({
 
       {showSelectionHighlight ? (
         <StreetLevelImagerySelectionOverlay
+          beforeId={beforeId}
           cameraLngLat={viewerPov?.lngLat}
           selectedPhoto={selectedPhoto}
           selectedSequence={providerDrawsSequences ? null : selectedSequence}

@@ -40,6 +40,7 @@ const bbox = useMapViewportBbox('main', map)
     selectedPhoto,
     photoCircleColor: '#3b82f6',
     mapFeatureCircleColor: '#94a3b8',
+    beforeId: 'road-label', // optional: draw everything below this layer of your style
   }}
 />
 

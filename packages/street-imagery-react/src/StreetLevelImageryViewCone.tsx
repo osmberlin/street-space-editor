@@ -37,6 +37,8 @@ export type StreetLevelImageryViewConeProps = {
   color?: DataDrivenPropertyValueSpecification<string>
   /** Cone length as a multiple of the per-photo view-direction shapes. Default 2.5. */
   scale?: number
+  /** Id of a layer of the host's style to draw the cone below. */
+  beforeId?: string
 }
 
 export const StreetLevelImageryViewCone = ({
@@ -45,6 +47,7 @@ export const StreetLevelImageryViewCone = ({
   viewerPov,
   color = SELECTION_COLOR,
   scale = 2.5,
+  beforeId,
 }: StreetLevelImageryViewConeProps) => {
   const apex = viewerPov?.lngLat ?? selectedPhoto.lngLat
   const isPano = selectedPhoto.isPano === true
@@ -81,6 +84,7 @@ export const StreetLevelImageryViewCone = ({
     <>
       <Source id={CONE_SOURCE_ID} type="geojson" data={coneFeature} />
       <Layer
+        beforeId={beforeId}
         id={CONE_FILL_LAYER_ID}
         type="fill"
         source={CONE_SOURCE_ID}
