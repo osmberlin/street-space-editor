@@ -19,6 +19,24 @@ function defaultProvenance(): LaneSlotProvenance {
   }
 }
 
+/**
+ * In a bus/psv pipe, `yes` marks bus lanes only when it singles lanes out:
+ * `||yes` or `no|yes` (other lanes empty / no, none designated). In
+ * `yes|yes|designated` or `yes|yes|yes` it only says buses may drive there.
+ */
+function yesMarksLanes(pipe: string[]): boolean {
+  const values = pipe.map((v) => v.toLowerCase())
+  return (
+    values.includes('yes') &&
+    !values.includes('designated') &&
+    values.some((v) => v === '' || v === 'no')
+  )
+}
+
+function designatedOnly(value: string | undefined): string | undefined {
+  return value?.toLowerCase() === 'designated' ? value : undefined
+}
+
 function inferKind(
   bicycle?: string,
   bus?: string,
@@ -26,11 +44,13 @@ function inferKind(
   turn?: string,
   direction?: LaneDirection,
 ): LaneKind {
-  // Only `designated` makes a bus / cycle lane. `yes` just says the lane may be used
-  // (real tagging: bus:lanes=yes|yes|yes|designated, bicycle:lanes=no|no|designated|yes).
+  // `designated` makes a bus / cycle lane. `yes` usually just says the lane may be used
+  // (bus:lanes=yes|yes|yes|designated); callers blank it unless it marks single lanes.
   if (bicycle?.toLowerCase() === 'designated') return 'bicycle'
-  if (bus?.toLowerCase() === 'designated') return 'bus'
-  if (psv?.toLowerCase() === 'designated') return 'bus'
+  const busVal = bus?.toLowerCase()
+  if (busVal === 'designated' || busVal === 'yes') return 'bus'
+  const psvVal = psv?.toLowerCase()
+  if (psvVal === 'designated' || psvVal === 'yes') return 'bus'
   if (direction === 'both_ways') return 'both_ways_turn'
   const turnVal = turn?.toLowerCase() ?? ''
   if (turnVal.includes('both_ways') || turnVal.includes('reverse')) return 'both_ways_turn'
@@ -258,7 +278,13 @@ export function buildDirectionSlots(
     if (surface[i]) prov.surface = 'tagged'
     if (smoothness[i]) prov.smoothness = 'tagged'
 
-    const kind = inferKind(bicycle[i], bus[i], psv[i], turn[i], direction)
+    const kind = inferKind(
+      bicycle[i],
+      yesMarksLanes(bus) ? bus[i] : designatedOnly(bus[i]),
+      yesMarksLanes(psv) ? psv[i] : designatedOnly(psv[i]),
+      turn[i],
+      direction,
+    )
     prov.kind =
       kind === 'travel'
         ? 'default'

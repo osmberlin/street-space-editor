@@ -223,6 +223,17 @@ describe('muv-inspired fixtures', () => {
     expect(model.slots.filter((s) => s.direction === 'backward')).toHaveLength(2)
   })
 
+  test('bus:lanes with yes: marks a lane only when it singles lanes out', () => {
+    const kinds = (pipe: string) =>
+      parseWayLanes({ highway: 'primary', oneway: 'yes', lanes: '3', 'bus:lanes': pipe }).slots.map(
+        (s) => s.kind,
+      )
+    expect(kinds('||yes')).toEqual(['travel', 'travel', 'bus'])
+    expect(kinds('no|no|yes')).toEqual(['travel', 'travel', 'bus'])
+    expect(kinds('yes|yes|yes')).toEqual(['travel', 'travel', 'travel'])
+    expect(kinds('yes|yes|designated')).toEqual(['travel', 'travel', 'bus'])
+  })
+
   test('muv-hwy-bus_lanes_count: lanes:bus:forward=1', () => {
     const tags = {
       highway: 'primary',
