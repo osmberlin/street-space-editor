@@ -77,7 +77,7 @@ const en: StreetImageryMessages = {
     exactDates: 'Exact dates',
     from: 'From',
     to: 'To',
-    photoCount: (count) => (count === 1 ? '1 photo' : `${count} photos`),
+    photoCount: (count) => (count === 1 ? '1 photo' : `${count.toLocaleString('en')} photos`),
   },
   viewpointRole: {
     here: 'Here',
@@ -138,7 +138,7 @@ const de: StreetImageryMessages = {
     exactDates: 'Genaue Daten',
     from: 'Von',
     to: 'Bis',
-    photoCount: (count) => (count === 1 ? '1 Foto' : `${count} Fotos`),
+    photoCount: (count) => (count === 1 ? '1 Foto' : `${count.toLocaleString('de')} Fotos`),
   },
   viewpointRole: {
     here: 'Hier',
