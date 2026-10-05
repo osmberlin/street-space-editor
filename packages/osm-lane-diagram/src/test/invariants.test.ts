@@ -339,3 +339,26 @@ describe('chain connectivity invariants', () => {
     expect(prevSeg.centrelineOffsetM).toBeCloseTo(centreSeg.centrelineOffsetM, 2)
   })
 })
+
+describe('review regressions', () => {
+  const sceneOf = (id: string) => layoutRoadSpace(fixtureChain(id))
+
+  test('same placement with a lane added on the right is not a placement issue', () => {
+    expect(sceneOf('right-turn-pocket').placementIssues).toBeUndefined()
+  })
+
+  test('cropping the scene does not create placement issues', () => {
+    expect(sceneOf('turn-pocket-then-continue').placementIssues).toBeUndefined()
+  })
+
+  test('the way line bends into the selected branch of a dual split', () => {
+    const scene = sceneOf('karl-marx-bi-to-dual')
+    const guide = scene.polylines.find((l) => l.kind === 'placement_guide')!
+    const top = guide.points[0]!
+    const median = scene.slotRects.find((r) => r.kind === 'median')!
+    expect(top.x).toBeGreaterThan(median.x + median.width)
+    // …and stays between the two directions on the bidirectional part.
+    const bottom = guide.points.at(-1)!
+    expect(bottom.x).toBeLessThan(top.x)
+  })
+})

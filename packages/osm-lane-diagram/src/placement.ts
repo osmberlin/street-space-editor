@@ -126,8 +126,9 @@ function slotKindAtLane(carriageway: RoadSpaceSlot[], lane: number): string | nu
 
 /**
  * Validate that consecutive segments' `placement=*` steps are compatible with a
- * shared purple centreline. Same index on different pipe stacks (e.g. both
- * `middle_of:2` but lane 2 is cycle vs motor) cannot align without shear.
+ * shared purple centreline: the lane a placement points at must be the same kind on
+ * both sides (e.g. `middle_of:2` on a cycle lane vs on a motor lane cannot align).
+ * The same `placement` with a different lane count is fine — lanes count from the left.
  */
 export function collectPlacementIssues(
   segments: Array<{
@@ -174,15 +175,10 @@ export function collectPlacementIssues(
     const bCw = carriagewaySlots(b.slots)
     const aKind = slotKindAtLane(aCw, aParsed.lane)
     const bKind = slotKindAtLane(bCw, bParsed.lane)
-    const sameTag = a.placementTag?.trim().toLowerCase() === b.placementTag?.trim().toLowerCase()
 
     if (aKind != null && bKind != null && aKind !== bKind) {
       issues.push(
         `ways ${a.wayId}→${b.wayId}: placement steps ${a.placementTag} → ${b.placementTag} put different slot kinds on the shared centreline (${aKind} vs ${bKind}) — ribbons must shear`,
-      )
-    } else if (sameTag && aCw.length !== bCw.length) {
-      issues.push(
-        `ways ${a.wayId}→${b.wayId}: same placement=${a.placementTag} but carriageway pipe counts differ (${aCw.length} vs ${bCw.length}) — lane ${aParsed.lane} is not the same column`,
       )
     }
   }

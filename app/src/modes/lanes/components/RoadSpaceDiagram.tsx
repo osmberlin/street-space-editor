@@ -908,6 +908,7 @@ export function RoadSpaceDiagram({
             stroke={COLORS.placement_guide}
             strokeWidth={10}
             strokeLinecap="round"
+            strokeLinejoin="round"
             opacity={0.28}
             pointerEvents="none"
             points={pointsAttr(line.points)}
@@ -956,20 +957,25 @@ export function RoadSpaceDiagram({
       {scene.polylines
         .filter((line) => line.kind === 'placement_guide')
         .map((line) => {
-          const x = line.points[0]?.x ?? scene.centrelineX ?? 0
+          // Arrow on the current band (the line can bend between bands); label at the top.
+          const topX = line.points[0]?.x ?? scene.centrelineX ?? 0
+          const x = scene.centrelineX ?? topX
           const y0 = Math.min(...line.points.map((p) => p.y))
           const y1 = Math.max(...line.points.map((p) => p.y))
-          const midY = (y0 + y1) / 2
+          const currentBand = scene.bands.find((b) => b.role === 'current' && !b.synthetic)
+          const midY = currentBand ? currentBand.y + currentBand.height / 2 : (y0 + y1) / 2
           const head = 7
           const travelRects = scene.slotRects.filter(
             (r) => r.label !== 'step_fill' && r.kind !== 'median' && !r.dimmed,
           )
           const leftEdge =
-            travelRects.length > 0 ? Math.min(...travelRects.map((r) => r.x)) : Math.max(8, x - 40)
+            travelRects.length > 0
+              ? Math.min(...travelRects.map((r) => r.x))
+              : Math.max(8, topX - 40)
           const rightEdge =
             travelRects.length > 0
               ? Math.max(...travelRects.map((r) => r.x + r.width))
-              : Math.min(scene.widthPx - 8, x + 40)
+              : Math.min(scene.widthPx - 8, topX + 40)
           return (
             <g key={line.id} pointerEvents="none">
               {/* Way direction = up the page (OSM forward). */}
@@ -983,7 +989,7 @@ export function RoadSpaceDiagram({
                 points={`${x - head},${midY + head * 0.2} ${x},${midY - head} ${x + head},${midY + head * 0.2}`}
               />
               <text
-                x={x + 8}
+                x={topX + 8}
                 y={y0 + 12}
                 fontSize={9}
                 fill={COLORS.placement_guide}

@@ -34,7 +34,7 @@ import type {
 
 const PADDING_PX = 16
 const EPS = 0.01
-/** Soft warning when solved stack offset disagrees with tagged placement (metres). */
+/** Soft warning when the way line jumps between two tagged placements (metres). */
 const PLACEMENT_OFFSET_WARN_M = 0.35
 /** Near-equal X positions merge into one separator run (px). */
 const SEPARATOR_X_TOLERANCE_PX = 2
@@ -163,6 +163,36 @@ function buildSiblingPlacementGuides(bands: BandGeometry[], metersToPx: number):
     i = j + 1
   }
   return out
+}
+
+/**
+ * The selected way's centreline through all bands: straight inside a real band at that
+ * band's own centreline, S-curve across the glue between two bands that differ
+ * (e.g. bidirectional → one branch of a dual carriageway).
+ */
+function buildPlacementGuidePoints(bands: BandGeometry[]): Array<{ x: number; y: number }> {
+  const real = bands.filter((b) => !b.segment.synthetic)
+  const points: Array<{ x: number; y: number }> = []
+  for (let i = 0; i < real.length; i++) {
+    const band = real[i]!
+    const top = round2(band.y)
+    const bottom = round2(band.y + band.height)
+    const prev = real[i - 1]
+    if (prev) {
+      appendSCurve(
+        points,
+        prev.centrelineX,
+        round2(prev.y + prev.height),
+        band.centrelineX,
+        top,
+        TRANSITION_CURVE_SAMPLES,
+      )
+    } else {
+      points.push({ x: band.centrelineX, y: top })
+    }
+    points.push({ x: band.centrelineX, y: bottom })
+  }
+  return dedupePoints(points)
 }
 
 function differs(a: number, b: number): boolean {
@@ -889,29 +919,28 @@ function buildBandCorrespondences(
   return out
 }
 
-function collectSolvedPlacementIssues(
-  segments: RoadSpaceSegment[],
-  layoutBands: BandGeometry[],
-  baseCentrelineX: number,
-  metersToPx: number,
-): string[] {
+/**
+ * Two neighbours that both tag an explicit `placement` say where the way line is in
+ * each; when the matched lanes put those two spots apart, the line has to jump.
+ */
+function collectSolvedPlacementIssues(layoutBands: BandGeometry[], metersToPx: number): string[] {
   const issues: string[] = []
-  let seg = 0
-  for (const band of layoutBands) {
-    if (band.segment.synthetic) continue
-    const segment = segments[seg]!
-    if (segment.placementTag) {
-      const placementOnlyStackLeft = round2(
-        baseCentrelineX - segment.centrelineOffsetM * metersToPx,
-      )
-      const deltaM = Math.abs(band.stackLeftX - placementOnlyStackLeft) / metersToPx
-      if (deltaM > PLACEMENT_OFFSET_WARN_M) {
-        issues.push(
-          `way ${segment.wayId}: solved stack offset differs from tagged placement by ${deltaM.toFixed(2)} m — corridor ribbons follow matched lanes, not the purple guide`,
-        )
-      }
+  const real = layoutBands.filter((b) => !b.segment.synthetic)
+  for (let i = 0; i < real.length - 1; i++) {
+    const a = real[i]!
+    const b = real[i + 1]!
+    const aTag = a.segment.placementTag
+    const bTag = b.segment.placementTag
+    if (!aTag || !bTag) continue
+    if (a.segment.placement.kind === 'transition' || b.segment.placement.kind === 'transition') {
+      continue
     }
-    seg++
+    const deltaM = Math.abs(a.centrelineX - b.centrelineX) / metersToPx
+    if (deltaM > PLACEMENT_OFFSET_WARN_M) {
+      issues.push(
+        `ways ${a.segment.wayId}→${b.segment.wayId}: the way line jumps ${deltaM.toFixed(2)} m between placement=${aTag} and placement=${bTag} — one of them does not fit the matched lanes`,
+      )
+    }
   }
   return issues
 }
@@ -1120,7 +1149,7 @@ export function layoutRoadSpace(
   const anchor = segments[anchorIndex]!
   const anchorStackLeftM = stackLeftM[anchorIndex] ?? 0
   const anchorCentrelineM = anchor.centrelineOffsetM
-  const baseCentrelineX = round2(PADDING_PX + anchorCentrelineM * metersToPx)
+  let baseCentrelineX = round2(PADDING_PX + anchorCentrelineM * metersToPx)
   const anchorStackLeftX = round2(baseCentrelineX - anchorCentrelineM * metersToPx)
 
   const bands: BandGeometry[] = []
@@ -1150,6 +1179,7 @@ export function layoutRoadSpace(
     if (Number.isFinite(minX) && Number.isFinite(maxX)) {
       const dx = round2(PADDING_PX - minX)
       if (Math.abs(dx) > EPS) {
+        baseCentrelineX = round2(baseCentrelineX + dx)
         for (const b of layoutBands) {
           b.stackLeftX = round2(b.stackLeftX + dx)
           b.slotLeftX = b.slotLeftX.map((x) => round2(x + dx))
@@ -1185,7 +1215,9 @@ export function layoutRoadSpace(
       (b) =>
         !b.segment.synthetic && b.segment.wayId === anchor.wayId && b.segment.role === anchor.role,
     ) ?? layoutBands.find((b) => !b.segment.synthetic)!
-  const placementGuideX = round2(anchorBand?.centrelineX ?? baseCentrelineX)
+  // Scene centreline = the selected way's own band (the guide may bend in neighbours).
+  const currentBand = layoutBands.find((b) => !b.segment.synthetic && b.segment.role === 'current')
+  const placementGuideX = round2((currentBand ?? anchorBand)?.centrelineX ?? baseCentrelineX)
   const bandCorrespondences = buildBandCorrespondences(layoutBands, correspondences)
 
   const sceneBands: SceneSegmentBand[] = layoutBands.map((b) => ({
@@ -1608,10 +1640,7 @@ export function layoutRoadSpace(
     id: 'placement-guide',
     kind: 'placement_guide',
     style: 'solid',
-    points: [
-      { x: placementGuideX, y: round2(first.y) },
-      { x: placementGuideX, y: round2(last.y + last.height) },
-    ],
+    points: buildPlacementGuidePoints(layoutBands),
   })
   polylines.push(...buildSiblingPlacementGuides(layoutBands, metersToPx))
 
@@ -1626,7 +1655,7 @@ export function layoutRoadSpace(
 
   const placementIssues = [
     ...collectPlacementIssues(segments),
-    ...collectSolvedPlacementIssues(segments, layoutBands, baseCentrelineX, metersToPx),
+    ...collectSolvedPlacementIssues(layoutBands, metersToPx),
   ]
   const unresolvedSibling = segments.some((s) => s.unresolvedSiblingHint)
   const debug = buildSceneDebug(
