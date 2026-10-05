@@ -10,7 +10,7 @@ React + MapLibre UI on top of `@osm-editor-kit/street-imagery`:
 - Map sources and layers for photos, sequences, and viewfields
 - Click handling and interactive layer ids
 - TanStack Query hooks to load provider data for the viewport
-- Lazy Mapillary and Panoramax viewer panels
+- Lazy viewer panels: Mapillary and Panoramax photos in one viewer (`mapillary-js`)
 - Helpers for selection, thumbnails, and easing the map to a photo
 - Viewpoints + floating photo viewer: suggested views per direction, history, map layer
 
@@ -54,9 +54,28 @@ const hits = queryStreetImageryFeatures(event)
 
 **Before photos are loaded:** where a provider has own vector tiles with its track lines (Mapillary: zoom 6 to 15), MapLibre reads those itself. Same colours and filters; the lines are not clickable. Zoomed far out these tiles are several MB each in dense areas; set `options.minZoom` to skip them.
 
-**Mapillary:** `createStreetImageryConfig({ mapillaryToken })` or `setStreetImageryConfig` at boot (`@osm-editor-kit/street-imagery`). **Panoramax + Vite:** see `app/vite.config.ts` for the consuming-app setup.
+**Mapillary:** `createStreetImageryConfig({ mapillaryToken })` or `setStreetImageryConfig` at boot (`@osm-editor-kit/street-imagery`). **Panoramax:** nothing to set up, the Mapillary viewer shows its pictures too (see below).
 
-Also: `useAllProviderPhotos`, `useProviderPhotos` / `useProviderSequences` / `useProviderMapFeatures`, `usePhotoThumbnails`, `resolveSelectedSequence`, `StreetLevelImageryViewCone`, `useViewerBearing` / `useViewerActions`. The panels themselves (`MapillaryPanel`, `PanoramaxPanel`) are in `@osm-editor-kit/street-imagery-react/viewer-panels`; `StreetLevelImageryViewer` loads them on demand, so `mapillary-js` and `@panoramax/web-viewer` are only loaded when a photo is shown.
+Also: `useAllProviderPhotos`, `useProviderPhotos` / `useProviderSequences` / `useProviderMapFeatures`, `usePhotoThumbnails`, `resolveSelectedSequence`, `StreetLevelImageryViewCone`, `useViewerBearing` / `useViewerActions`. The panels themselves (`MapillaryPanel`, `PanoramaxPanel`) are in `@osm-editor-kit/street-imagery-react/viewer-panels`; `StreetLevelImageryViewer` loads them on demand, so `mapillary-js` is only loaded when a photo is shown.
+
+### Panoramax in the Mapillary viewer
+
+`PanoramaxPanel` is a `mapillary-js` viewer with a `PanoramaxDataProvider`, which reads the Panoramax API. One viewer engine for both providers: the same arrows, the same view cone on the map, no second engine to load and no build setup.
+
+- A picture opens with its `sd` file (2048 px wide). When you zoom in, the original file is loaded once and the sharp parts are cut from it in the browser.
+- Steps along the sequence work (previous, next, play). The arrows to pictures nearby do not: they need Mapillary's 3D reconstruction.
+- The panel shows creator and licence in a line at the bottom; `hideAttribution` removes it.
+- `PanoramaxDataProvider` is exported from `viewer-panels` for a `mapillary-js` `Viewer` you own: `new Viewer({ container, dataProvider: new PanoramaxDataProvider({ endpoint }), imageId })`.
+
+**Panoramax's own viewer** (`@panoramax/web-viewer`) is still there as an option:
+
+```tsx
+import { PanoramaxWebViewerPanel } from '@osm-editor-kit/street-imagery-react/panoramax-web-viewer'
+
+<StreetLevelImageryViewer panoramaxPanel={PanoramaxWebViewerPanel} … />
+```
+
+Only then you need `@panoramax/web-viewer` (an optional peer dependency) and its Vite setup: see `vite.config.ts` of [street-level-imagery-provider-overview](https://github.com/osmberlin/street-level-imagery-provider-overview).
 
 ## Viewpoints and floating viewer
 

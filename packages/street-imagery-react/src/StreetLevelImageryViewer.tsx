@@ -1,7 +1,8 @@
 import type { NormalizedPhoto } from '@osm-editor-kit/street-imagery'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, type ComponentType } from 'react'
 import { useStreetImageryI18n } from './i18n/StreetImageryLocaleProvider'
 import type { MapillaryLookAt, MapillaryViewerOutline } from './panels/mapillaryLookAt'
+import type { PanoramaxPanelProps } from './panels/PanoramaxPanel'
 import type { StreetImageryPhotoSelection } from './types'
 
 const MapillaryPanel = lazy(() =>
@@ -30,10 +31,16 @@ type StreetLevelImageryViewerProps = {
   /** Mapillary: outlines to draw in the shown image. */
   outlines?: MapillaryViewerOutline[]
   /**
-   * Hide the viewer's own attribution (Mapillary) or legend (Panoramax); the host must then show
-   * creator and licence itself, from `onViewerPhoto`.
+   * Hide the viewer's own attribution; the host must then show creator and licence itself, from
+   * `onViewerPhoto`.
    */
   hideAttribution?: boolean
+  /**
+   * Another panel for Panoramax pictures, e.g. `PanoramaxWebViewerPanel` of the
+   * `panoramax-web-viewer` entry (Panoramax's own viewer). Default: the Mapillary viewer shows
+   * them too.
+   */
+  panoramaxPanel?: ComponentType<PanoramaxPanelProps>
 }
 
 const ViewerPanelPlaceholder = () => {
@@ -55,6 +62,7 @@ export const StreetLevelImageryViewer = ({
   lookAt,
   outlines,
   hideAttribution,
+  panoramaxPanel: PanoramaxPanelOverride,
 }: StreetLevelImageryViewerProps) => {
   if (photo.providerId === 'mapillary') {
     return (
@@ -75,11 +83,12 @@ export const StreetLevelImageryViewer = ({
   }
 
   if (photo.providerId === 'panoramax') {
+    const Panel = PanoramaxPanelOverride ?? PanoramaxPanel
     return (
       <Suspense fallback={<ViewerPanelPlaceholder />}>
-        <PanoramaxPanel
+        <Panel
           groupPhotos={groupPhotos}
-          hideLegend={hideAttribution}
+          hideAttribution={hideAttribution}
           onViewerPhoto={onViewerPhoto}
           onEaseMapToPoint={onEaseMapToPoint}
           onPhotoSelected={onPhotoSelected}

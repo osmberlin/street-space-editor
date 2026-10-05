@@ -18,7 +18,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./photo-details": "./src/photo-details/index.ts",
-    "./viewer-panels": "./src/viewer-panels/index.ts"
+    "./viewer-panels": "./src/viewer-panels/index.ts",
+    "./panoramax-web-viewer": "./src/panoramax-web-viewer/index.ts"
   },
   "publishConfig": {
     "access": "public",
@@ -60,6 +61,11 @@
     "react-map-gl": "^8",
     "zustand": "^5"
   },
+  "peerDependenciesMeta": {
+    "@panoramax/web-viewer": {
+      "optional": true
+    }
+  },
   "publishExports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -72,6 +78,10 @@
     "./viewer-panels": {
       "types": "./dist/viewer-panels/index.d.ts",
       "import": "./dist/viewer-panels.js"
+    },
+    "./panoramax-web-viewer": {
+      "types": "./dist/panoramax-web-viewer/index.d.ts",
+      "import": "./dist/panoramax-web-viewer.js"
     },
     "./package.json": "./package.json"
   }

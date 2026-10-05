@@ -1,31 +1,20 @@
-import '@panoramax/web-viewer'
-import { getStreetImageryConfig } from '@osm-editor-kit/street-imagery'
+import { getStreetImageryConfig, providerExternalLink } from '@osm-editor-kit/street-imagery'
 import type { NormalizedPhoto } from '@osm-editor-kit/street-imagery'
-import { useEffect, useEffectEvent, useRef } from 'react'
+import 'mapillary-js/dist/mapillary.css'
+
+import {
+  Viewer,
+  type ViewerBearingEvent,
+  type ViewerImageEvent,
+  type ViewerNavigableEvent,
+} from 'mapillary-js'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import type { StreetImageryPhotoSelection } from '../types'
 import { useViewerActions } from '../useViewerStore'
-import type {
-  PnxPhotoViewerElement,
-  PnxPictureLoadedEventDetail,
-  PnxSelectEventDetail,
-  PnxViewRotatedEventDetail,
-} from './panoramax-photo-viewer.d'
-import { limitPanningToImage } from './panoramaxLimitPanning'
-import { panoramaxPhotoFromMetadata } from './panoramaxPhotoFromMetadata'
+import { PanoramaxDataProvider } from './panoramaxDataProvider'
+import { panoramaxPhotoFromItem } from './panoramaxItem'
 
-const panoramaxApiEndpoint = () => `${getStreetImageryConfig().panoramaxApiBase}/api`
-
-/**
- * `widgets="false"` keeps the viewer from creating the legend; this covers a viewer that was
- * created before `hideLegend` was set. The legend sits in the page, outside the viewer's box, so
- * it needs page-level CSS.
- */
-const HIDE_LEGEND_CSS =
-  'pnx-photo-viewer pnx-bottom-drawer, pnx-photo-viewer pnx-picture-legend { display: none !important; }'
-
-const normalizeBearing = (degrees: number) => ((degrees % 360) + 360) % 360
-
-type PanoramaxPanelProps = {
+export type PanoramaxPanelProps = {
   photo: NormalizedPhoto
   groupPhotos: NormalizedPhoto[]
   onPhotoSelected: (selection: StreetImageryPhotoSelection) => void
@@ -33,44 +22,38 @@ type PanoramaxPanelProps = {
   /** The shown picture with creator, licence, local capture time and camera. */
   onViewerPhoto?: (photo: NormalizedPhoto) => void
   /**
-   * Leave out the viewer's own widgets: the legend (a bottom drawer in narrow containers), the
-   * player and the zoom buttons. The host must then show creator and licence itself, from
-   * `onViewerPhoto`. Stepping through a sequence still works with the arrows in the photo.
+   * Hide the line with creator and licence. The host must then show both itself, from
+   * `onViewerPhoto`.
    */
-  hideLegend?: boolean
+  hideAttribution?: boolean
 }
 
-type PendingSelect = {
-  sequenceId: string | null
-  photoId: string
-}
-
+/**
+ * Panoramax pictures in the Mapillary viewer (`mapillary-js` with a `PanoramaxDataProvider`): no
+ * second viewer engine to load, and the same handling as Mapillary photos.
+ */
 export const PanoramaxPanel = ({
   photo,
   onPhotoSelected,
   onEaseMapToPoint,
   onViewerPhoto,
-  hideLegend = false,
+  hideAttribution = false,
 }: PanoramaxPanelProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
-  const viewerRef = useRef<PnxPhotoViewerElement>(null)
+  const viewerRef = useRef<Viewer | null>(null)
+  const navigableRef = useRef(false)
+  const pendingImageIdRef = useRef<string | null>(null)
   const lastViewerPhotoIdRef = useRef<string | null>(null)
-  const readyRef = useRef(false)
-  const pendingSelectRef = useRef<PendingSelect | null>(null)
-  const photoRef = useRef(photo)
   const bearingRafRef = useRef<number | null>(null)
   const pendingBearingRef = useRef<number | null>(null)
-  const pendingHfovRef = useRef<number | null>(null)
   const actions = useViewerActions()
+  const initialPhotoIdRef = useRef(photo.photoId)
+  const [shownPhoto, setShownPhoto] = useState<NormalizedPhoto | null>(null)
+  // Callbacks may change identity every render; the viewer must not remount for that.
+  const emitPhotoSelected = useEffectEvent(onPhotoSelected)
+  const emitEaseMapToPoint = useEffectEvent(onEaseMapToPoint)
   const emitViewerPhoto = useEffectEvent((viewerPhoto: NormalizedPhoto) =>
     onViewerPhoto?.(viewerPhoto),
-  )
-
-  useEffect(
-    function syncPhotoRef() {
-      photoRef.current = photo
-    },
-    [photo],
   )
 
   useEffect(
@@ -83,14 +66,74 @@ export const PanoramaxPanel = ({
   )
 
   useEffect(
-    function mountPanoramaxViewer() {
-      const viewer = viewerRef.current
+    function mountViewer() {
       const container = containerRef.current
-      if (!viewer || !container) {
+      if (!container) {
         return
       }
 
-      lastViewerPhotoIdRef.current = photoRef.current.photoId
+      const dataProvider = new PanoramaxDataProvider({
+        endpoint: `${getStreetImageryConfig().panoramaxApiBase}/api`,
+      })
+      const viewer = new Viewer({
+        container,
+        dataProvider,
+        imageId: initialPhotoIdRef.current,
+        component: {
+          // The attribution of the viewer links to mapillary.com.
+          attribution: false,
+          // Load only the direct neighbours ahead.
+          cache: { depth: { sequence: 1, spherical: 0, step: 0, turn: 0 } },
+          cover: false,
+          sequence: { visible: true },
+        },
+      })
+      viewerRef.current = viewer
+      lastViewerPhotoIdRef.current = initialPhotoIdRef.current
+
+      const flushPendingMove = () => {
+        const pendingId = pendingImageIdRef.current
+        if (!pendingId) {
+          return
+        }
+        pendingImageIdRef.current = null
+        void viewer.moveTo(pendingId).catch(() => {})
+      }
+
+      const onNavigable = (event: ViewerNavigableEvent) => {
+        navigableRef.current = event.navigable
+        if (event.navigable) {
+          flushPendingMove()
+        }
+      }
+
+      const onImage = (event: ViewerImageEvent) => {
+        const { image } = event
+        lastViewerPhotoIdRef.current = image.id
+        const item = dataProvider.getItem(image.id)
+        if (!item) {
+          return
+        }
+        const viewerPhoto = panoramaxPhotoFromItem(item)
+
+        emitPhotoSelected({
+          provider: 'panoramax',
+          sequenceId: viewerPhoto.sequenceId ?? `photo:${image.id}`,
+          photoId: image.id,
+        })
+        setShownPhoto(viewerPhoto)
+        emitViewerPhoto(viewerPhoto)
+
+        // A flat photo looks where its camera looked: set that right away, so the map's cone does
+        // not show the previous photo's direction until the viewer's first `bearing` event.
+        actions.setPov({
+          lngLat: viewerPhoto.lngLat,
+          ...(!viewerPhoto.isPano && viewerPhoto.heading != null
+            ? { bearing: viewerPhoto.heading }
+            : {}),
+        })
+        emitEaseMapToPoint(...viewerPhoto.lngLat)
+      }
 
       const flushBearing = () => {
         bearingRafRef.current = null
@@ -98,116 +141,44 @@ export const PanoramaxPanel = ({
           actions.setPov({ bearing: pendingBearingRef.current })
           pendingBearingRef.current = null
         }
-        if (pendingHfovRef.current != null) {
-          actions.setPov({ hfov: pendingHfovRef.current })
-          pendingHfovRef.current = null
-        }
+        void viewer
+          .getFieldOfView()
+          .then((fov) => {
+            actions.setPov({ hfov: fov })
+          })
+          .catch(() => {})
       }
 
-      const onSelect = (event: Event) => {
-        const { seqId, picId } = (event as CustomEvent<PnxSelectEventDetail>).detail
-        if (!picId) {
-          return
-        }
-
-        lastViewerPhotoIdRef.current = picId
-
-        const currentPhoto = photoRef.current
-        const sequenceId =
-          seqId ??
-          (picId === currentPhoto.photoId && currentPhoto.sequenceId
-            ? currentPhoto.sequenceId
-            : `photo:${picId}`)
-
-        onPhotoSelected({
-          provider: 'panoramax',
-          sequenceId,
-          photoId: picId,
-        })
-      }
-
-      const onPictureLoaded = (event: Event) => {
-        const detail = (event as CustomEvent<PnxPictureLoadedEventDetail>).detail
-        const metadata = viewer.psv?.getPictureMetadata()
-        if (metadata) {
-          emitViewerPhoto(panoramaxPhotoFromMetadata(metadata))
-        }
-        if (detail.lon == null || detail.lat == null) {
-          return
-        }
-
-        actions.setPov({ lngLat: [detail.lon, detail.lat] })
-
-        if (detail.x != null) {
-          actions.setPov({ bearing: normalizeBearing(detail.x) })
-        }
-
-        const psv = viewer.psv
-        if (psv && detail.z != null) {
-          actions.setPov({ hfov: psv.dataHelper.zoomLevelToFov(detail.z) })
-        }
-
-        onEaseMapToPoint(detail.lon, detail.lat)
-      }
-
-      const onViewRotated = (event: Event) => {
-        const detail = (event as CustomEvent<PnxViewRotatedEventDetail>).detail
-        pendingBearingRef.current = normalizeBearing(detail.x)
-
-        const psv = viewer.psv
-        if (psv && detail.z != null) {
-          pendingHfovRef.current = psv.dataHelper.zoomLevelToFov(detail.z)
-        }
-
+      const onBearing = (event: ViewerBearingEvent) => {
+        pendingBearingRef.current = event.bearing
         if (bearingRafRef.current == null) {
           bearingRafRef.current = requestAnimationFrame(flushBearing)
         }
       }
 
-      viewer.addEventListener('select', onSelect)
-      viewer.addEventListener('psv:picture-loaded', onPictureLoaded)
-      viewer.addEventListener('psv:view-rotated', onViewRotated)
+      viewer.on('navigable', onNavigable)
+      viewer.on('image', onImage)
+      viewer.on('bearing', onBearing)
 
       const resizeObserver = new ResizeObserver(() => {
-        viewer.psv?.resize()
+        viewer.resize()
       })
       resizeObserver.observe(container)
 
-      // The viewer builds its Photo Sphere Viewer a moment after mounting.
-      let stopLimit: (() => void) | null = null
-      const startLimit = () => {
-        if (!stopLimit && viewer.psv) {
-          stopLimit = limitPanningToImage(viewer.psv)
-        }
-      }
-      startLimit()
-      viewer.addEventListener('psv:picture-loaded', startLimit)
-
-      readyRef.current = true
-
-      const pending = pendingSelectRef.current
-      if (pending) {
-        pendingSelectRef.current = null
-        if (typeof viewer.select === 'function') {
-          viewer.select(pending.sequenceId ?? null, pending.photoId)
-        }
-      }
-
       return () => {
-        readyRef.current = false
         if (bearingRafRef.current != null) {
           cancelAnimationFrame(bearingRafRef.current)
           bearingRafRef.current = null
         }
         resizeObserver.disconnect()
-        viewer.removeEventListener('select', onSelect)
-        viewer.removeEventListener('psv:picture-loaded', onPictureLoaded)
-        viewer.removeEventListener('psv:view-rotated', onViewRotated)
-        viewer.removeEventListener('psv:picture-loaded', startLimit)
-        stopLimit?.()
+        viewer.off('navigable', onNavigable)
+        viewer.off('image', onImage)
+        viewer.off('bearing', onBearing)
+        viewer.remove()
+        viewerRef.current = null
       }
     },
-    [actions, onEaseMapToPoint, onPhotoSelected],
+    [actions],
   )
 
   useEffect(
@@ -221,36 +192,50 @@ export const PanoramaxPanel = ({
 
       lastViewerPhotoIdRef.current = photo.photoId
 
-      if (!readyRef.current) {
-        pendingSelectRef.current = { sequenceId: photo.sequenceId, photoId: photo.photoId }
-        return
-      }
-
-      if (typeof viewer.select === 'function') {
-        viewer.select(photo.sequenceId ?? null, photo.photoId)
+      if (navigableRef.current) {
+        void viewer.moveTo(photo.photoId).catch(() => {})
+      } else {
+        pendingImageIdRef.current = photo.photoId
       }
     },
-    [actions, photo.photoId, photo.sequenceId],
+    [actions, photo.photoId],
   )
+
+  const attribution = hideAttribution ? null : shownPhoto
+  const license = attribution?.details?.license
 
   return (
     <div
-      ref={containerRef}
-      className="min-h-48 overflow-hidden rounded-lg border border-slate-200 bg-slate-900"
+      className="relative min-h-48 overflow-hidden rounded-lg border border-slate-200 bg-slate-900"
       style={{ aspectRatio: '4 / 3' }}
     >
-      {hideLegend ? <style>{HIDE_LEGEND_CSS}</style> : null}
-      <pnx-photo-viewer
-        ref={viewerRef}
-        className="block h-full w-full"
-        endpoint={panoramaxApiEndpoint()}
-        url-parameters="false"
-        // Without widgets the viewer does not create its legend, bottom drawer, player and zoom
-        // buttons at all. It reads this once, when it is created.
-        widgets={hideLegend ? 'false' : undefined}
-        picture={photo.photoId}
-        sequence={photo.sequenceId ?? undefined}
-      />
+      <div ref={containerRef} className="h-full w-full" />
+      {attribution ? (
+        <div className="absolute right-0 bottom-0 flex gap-1.5 rounded-tl bg-black/50 px-1.5 py-0.5 text-[11px] leading-4 text-white">
+          <a
+            className="underline-offset-2 hover:underline"
+            href={providerExternalLink(attribution)}
+            rel="noreferrer"
+            target="_blank"
+          >
+            {['Panoramax', attribution.creatorName].filter(Boolean).join(' · ')}
+          </a>
+          {license ? (
+            attribution.details?.licenseUrl ? (
+              <a
+                className="underline-offset-2 hover:underline"
+                href={attribution.details.licenseUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {license}
+              </a>
+            ) : (
+              <span>{license}</span>
+            )
+          ) : null}
+        </div>
+      ) : null}
     </div>
   )
 }
