@@ -4,6 +4,7 @@ import {
   setStreetImageryConfig,
 } from '@osm-editor-kit/street-imagery'
 import { mapillaryAdapter } from '@osm-editor-kit/street-imagery/providers/mapillary'
+import { mapillarySignsAdapter } from '@osm-editor-kit/street-imagery/providers/mapillary-signs'
 import { panoramaxAdapter } from '@osm-editor-kit/street-imagery/providers/panoramax'
 
 /** Public Mapillary token (same as iD / imagery overview). Override via VITE_MAPILLARY_ACCESS_TOKEN. */
@@ -19,7 +20,7 @@ export function initStreetImageryConfig() {
     }),
   )
   // Only the providers this editor offers get bundled.
-  registerProviderAdapters([mapillaryAdapter, panoramaxAdapter])
+  registerProviderAdapters([mapillaryAdapter, panoramaxAdapter, mapillarySignsAdapter])
 }
 
 export function getStreetImageryRuntimeConfig() {

@@ -243,7 +243,6 @@
   "panel_sidepath_side_left": "links",
   "panel_sidepath_side_right": "rechts",
   "panel_sidepath_of_highway": "{kind} ({side}) von {highway}",
-
   "panel_warnings": "Warnungen",
   "panel_width_m": "Breite (m)",
   "width_guide_section_label": "Breite messen",
@@ -423,5 +422,13 @@
   "street_imagery_panel_title": "Straßenbilder",
   "street_imagery_add_tag": "Foto-ID am Weg speichern",
   "street_imagery_add_tag_key": "{key} setzen",
-  "street_imagery_id_precision_caveat": "Mapillary-IDs können in JavaScript an Genauigkeit verlieren; gespeicherten Wert prüfen."
+  "street_imagery_id_precision_caveat": "Mapillary-IDs können in JavaScript an Genauigkeit verlieren; gespeicherten Wert prüfen.",
+  "street_imagery_provider_mapillary_signs": "Mapillary-Verkehrszeichen",
+  "street_imagery_sign_groups_heading": "Verkehrszeichen",
+  "street_imagery_sign_group_bike": "Rad",
+  "street_imagery_sign_group_speed": "Geschwindigkeit",
+  "street_imagery_sign_group_access": "Zufahrt & Einbahnstraße",
+  "street_imagery_sign_group_other": "Sonstige (Wegweiser, Warnzeichen …)",
+  "street_imagery_panel_title_sign": "Verkehrszeichen",
+  "street_imagery_sign_group_parking": "Parken & Halten"
 }

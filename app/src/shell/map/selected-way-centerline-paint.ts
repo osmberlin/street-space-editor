@@ -8,6 +8,8 @@ export const selectedWayCenterlinePaint = {
 /** Thin `>` glyphs along the selected centerline (see `buildCenterlineDirectionMarkers`). */
 export const selectedWayCenterlineDirectionLayout = {
   'text-field': '>',
+  // MapLibre's default font ("Open Sans Regular") is not on OpenFreeMap's glyph server (404).
+  'text-font': ['Noto Sans Regular'],
   'text-size': 8,
   'text-rotate': ['get', 'bearing'],
   'text-rotation-alignment': 'map',

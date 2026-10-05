@@ -27,15 +27,28 @@ import {
 } from './photo-date-slider'
 import {
   DEFAULT_PHOTO_TYPES,
-  EDITOR_PHOTO_PROVIDERS,
-  type EditorPhotoProvider,
+  DEFAULT_SIGN_GROUPS,
+  EDITOR_IMAGERY_LAYERS,
+  EDITOR_SIGNS_LAYER,
+  SIGN_GROUP_IDS,
+  type EditorImageryLayer,
   type EditorPhotoType,
+  type SignGroupId,
 } from './street-imagery-search-params'
 import { useModeSearchNavigation } from './use-mode-search-navigation'
 
-const PROVIDER_LABEL: Record<EditorPhotoProvider, () => string> = {
+const PROVIDER_LABEL: Record<EditorImageryLayer, () => string> = {
   mapillary: () => m.street_imagery_provider_mapillary(),
   panoramax: () => m.street_imagery_provider_panoramax(),
+  'mapillary-signs': () => m.street_imagery_provider_mapillary_signs(),
+}
+
+const SIGN_GROUP_LABEL: Record<SignGroupId, () => string> = {
+  parking: () => m.street_imagery_sign_group_parking(),
+  bike: () => m.street_imagery_sign_group_bike(),
+  speed: () => m.street_imagery_sign_group_speed(),
+  access: () => m.street_imagery_sign_group_access(),
+  other: () => m.street_imagery_sign_group_other(),
 }
 
 const AGE_LEGEND_LABEL: Record<PhotoAgeBucketId, () => string> = {
@@ -71,12 +84,12 @@ export function MapStreetImageryControls() {
     [viewportPhotosForTicks],
   )
 
-  const toggleProvider = (provider: EditorPhotoProvider) => {
+  const toggleProvider = (provider: EditorImageryLayer) => {
     const next = new Set(search.photos ?? [])
     if (next.has(provider)) next.delete(provider)
     else next.add(provider)
 
-    const providers = EDITOR_PHOTO_PROVIDERS.filter((id) => next.has(id))
+    const providers = EDITOR_IMAGERY_LAYERS.filter((id) => next.has(id))
     updateSearch(
       {
         photos: providers.length > 0 ? providers : undefined,
@@ -96,6 +109,18 @@ export function MapStreetImageryControls() {
       {
         photoTypes: resolved.length > 0 ? resolved : [...DEFAULT_PHOTO_TYPES],
       },
+      { replace: true },
+    )
+  }
+
+  const signGroups = new Set(search.signGroups)
+  const toggleSignGroup = (group: SignGroupId, checked: boolean) => {
+    const next = new Set(search.signGroups)
+    if (checked) next.add(group)
+    else next.delete(group)
+    const resolved = SIGN_GROUP_IDS.filter((id) => next.has(id))
+    updateSearch(
+      { signGroups: resolved.length > 0 ? resolved : [...DEFAULT_SIGN_GROUPS] },
       { replace: true },
     )
   }
@@ -135,7 +160,7 @@ export function MapStreetImageryControls() {
       <DropdownMenu anchor={{ to: 'top end', gap: 8, padding: 12 }} className="z-50 w-72">
         <DropdownSection>
           <DropdownHeading>{m.street_imagery_providers_heading()}</DropdownHeading>
-          {EDITOR_PHOTO_PROVIDERS.map((provider) => (
+          {EDITOR_IMAGERY_LAYERS.map((provider) => (
             <DropdownItem key={provider} onClick={() => toggleProvider(provider)}>
               <Check
                 data-slot="icon"
@@ -192,6 +217,27 @@ export function MapStreetImageryControls() {
             <DropdownLabel>{m.street_imagery_filter_pano()}</DropdownLabel>
           </DropdownItem>
         </DropdownSection>
+        {enabled.has(EDITOR_SIGNS_LAYER) ? (
+          <>
+            <DropdownDivider />
+            <DropdownSection>
+              <DropdownHeading>{m.street_imagery_sign_groups_heading()}</DropdownHeading>
+              {SIGN_GROUP_IDS.map((group) => (
+                <DropdownItem
+                  key={group}
+                  onClick={() => toggleSignGroup(group, !signGroups.has(group))}
+                >
+                  <Check
+                    data-slot="icon"
+                    className={signGroups.has(group) ? 'size-4' : 'size-4 opacity-0'}
+                    aria-hidden
+                  />
+                  <DropdownLabel>{SIGN_GROUP_LABEL[group]()}</DropdownLabel>
+                </DropdownItem>
+              ))}
+            </DropdownSection>
+          </>
+        ) : null}
         <DropdownDivider />
         <DropdownSection>
           <DropdownHeading>{m.street_imagery_filter_date()}</DropdownHeading>

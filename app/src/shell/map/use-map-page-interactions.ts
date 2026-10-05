@@ -146,8 +146,16 @@ export function useMapPageInteractions() {
   function handleClick(event: MapLayerMouseEvent) {
     if (isCutActive && handleCutClick(event)) return
 
-    const photoHits = queryStreetImageryFeatures(event).filter((hit) => hit.kind === 'photo')
-    const photoHit = photoHits[0]
+    const hits = queryStreetImageryFeatures(event)
+    // A sign: select it; the viewer shows the photos that show it, turned to it.
+    const signHit = hits.find((hit) => hit.kind === 'mapFeature' && hit.featureId)
+    if (signHit?.featureId) {
+      updateSearch({ feature: signHit.featureId, photo: undefined }, { replace: true })
+      event.originalEvent.stopPropagation()
+      return
+    }
+
+    const photoHit = hits.find((hit) => hit.kind === 'photo')
     if (photoHit?.photoId && isEditorPhotoProvider(photoHit.providerId)) {
       updateSearch(
         {
@@ -156,6 +164,7 @@ export function useMapPageInteractions() {
             photoId: photoHit.photoId,
             ...(photoHit.sequenceId ? { sequenceId: photoHit.sequenceId } : {}),
           },
+          feature: undefined,
         },
         { replace: true },
       )

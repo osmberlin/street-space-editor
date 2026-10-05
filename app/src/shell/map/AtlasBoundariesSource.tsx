@@ -59,6 +59,7 @@ export function AtlasBoundariesSource() {
             ' ',
             ['to-string', ['get', 'name']],
           ],
+          'text-font': ['Noto Sans Regular'],
           'text-size': 14,
         }}
         paint={atlasDistrictLabelPaint}

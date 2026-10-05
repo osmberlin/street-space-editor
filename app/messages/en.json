@@ -243,7 +243,6 @@
   "panel_sidepath_side_left": "left",
   "panel_sidepath_side_right": "right",
   "panel_sidepath_of_highway": "{kind} ({side}) of {highway}",
-
   "panel_warnings": "Warnings",
   "panel_width_m": "Width (m)",
   "width_guide_section_label": "How to measure width",
@@ -423,5 +422,13 @@
   "street_imagery_panel_title": "Street imagery",
   "street_imagery_add_tag": "Add photo ID to way",
   "street_imagery_add_tag_key": "Set {key}",
-  "street_imagery_id_precision_caveat": "Mapillary IDs may lose precision in JavaScript; verify the stored value."
+  "street_imagery_id_precision_caveat": "Mapillary IDs may lose precision in JavaScript; verify the stored value.",
+  "street_imagery_provider_mapillary_signs": "Mapillary traffic signs",
+  "street_imagery_sign_groups_heading": "Traffic signs",
+  "street_imagery_sign_group_bike": "Bike",
+  "street_imagery_sign_group_speed": "Speed",
+  "street_imagery_sign_group_access": "Access & oneway",
+  "street_imagery_sign_group_other": "Other (directions, warnings …)",
+  "street_imagery_panel_title_sign": "Traffic sign",
+  "street_imagery_sign_group_parking": "Parking & stopping"
 }

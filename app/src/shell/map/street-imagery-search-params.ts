@@ -1,7 +1,20 @@
+import { SIGN_GROUP_IDS, type SignGroupId } from '@osm-editor-kit/street-imagery'
 import { z } from 'zod'
 
 export const EDITOR_PHOTO_PROVIDERS = ['mapillary', 'panoramax'] as const
 export type EditorPhotoProvider = (typeof EDITOR_PHOTO_PROVIDERS)[number]
+
+/** Map layer of Mapillary's detected traffic signs (no photos of its own). */
+export const EDITOR_SIGNS_LAYER = 'mapillary-signs'
+
+/** Everything the camera menu can switch on: the photo providers and the signs layer. */
+export const EDITOR_IMAGERY_LAYERS = [...EDITOR_PHOTO_PROVIDERS, EDITOR_SIGNS_LAYER] as const
+export type EditorImageryLayer = (typeof EDITOR_IMAGERY_LAYERS)[number]
+
+export { SIGN_GROUP_IDS, type SignGroupId }
+
+/** Signs this editor is about: parking restrictions and bike signs. The rest is opt-in. */
+export const DEFAULT_SIGN_GROUPS: SignGroupId[] = ['parking', 'bike']
 
 export const DEFAULT_PHOTO_TYPES = ['flat', 'pano'] as const
 export type EditorPhotoType = (typeof DEFAULT_PHOTO_TYPES)[number]
@@ -21,6 +34,8 @@ const isoDateSchema = z
   }, 'Invalid calendar date')
 
 export const editorPhotoProviderSchema = z.enum(EDITOR_PHOTO_PROVIDERS)
+export const editorImageryLayerSchema = z.enum(EDITOR_IMAGERY_LAYERS)
+export const signGroupSchema = z.enum(SIGN_GROUP_IDS)
 export const editorPhotoTypeSchema = z.enum(DEFAULT_PHOTO_TYPES)
 
 export type PhotoSearchSelection = {
@@ -54,6 +69,17 @@ export function parseCommaList(raw: unknown): string[] | undefined {
 }
 
 export function parsePhotoParam(raw: unknown): PhotoSearchSelection | undefined {
+  // The router writes the parsed object back to the URL (`photo={"provider":…}`).
+  if (typeof raw === 'object' && raw !== null && !Array.isArray(raw)) {
+    const { provider, photoId, sequenceId } = raw as Record<string, unknown>
+    if (typeof provider !== 'string' || !isEditorPhotoProvider(provider)) return undefined
+    if (typeof photoId !== 'string' && typeof photoId !== 'number') return undefined
+    return {
+      provider,
+      photoId: String(photoId),
+      ...(sequenceId ? { sequenceId: String(sequenceId) } : {}),
+    }
+  }
   if (typeof raw !== 'string' || !raw.trim()) return undefined
   const parts = raw.split('/')
   if (parts.length < 2) return undefined
@@ -133,4 +159,13 @@ export function isDefaultPhotoTypes(photoTypes: EditorPhotoType[] | undefined): 
 export const streetImageryUsedLabel: Record<EditorPhotoProvider, string> = {
   mapillary: 'Mapillary',
   panoramax: 'Panoramax',
+}
+
+export function isDefaultSignGroups(groups: SignGroupId[] | undefined): boolean {
+  // Absent from URL / search object means the default groups.
+  if (!groups || groups.length === 0) return true
+  return (
+    groups.length === DEFAULT_SIGN_GROUPS.length &&
+    DEFAULT_SIGN_GROUPS.every((id) => groups.includes(id))
+  )
 }

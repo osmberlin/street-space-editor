@@ -11,7 +11,10 @@ import { hasNonDefaultPrimaryFocus, implicitBoundariesEnabled } from './map-focu
 import { defaultPhotoFromIso } from './photo-date-slider'
 import {
   DEFAULT_PHOTO_TYPES,
-  editorPhotoProviderSchema,
+  editorImageryLayerSchema,
+  signGroupSchema,
+  isDefaultSignGroups,
+  DEFAULT_SIGN_GROUPS,
   editorPhotoTypeSchema,
   isDefaultPhotoTypes,
   parseCommaList,
@@ -179,9 +182,9 @@ export const mapSearchSchema = z.object({
     .string()
     .optional()
     .transform((s): UiLocale | undefined => (isUiLocale(s) ? s : undefined)),
-  /** Enabled street-level photo providers (`mapillary`, `panoramax`); omitted = off. */
+  /** Enabled street-imagery layers (`mapillary`, `panoramax`, `mapillary-signs`); omitted = off. */
   photos: z
-    .preprocess(parseCommaList, z.array(editorPhotoProviderSchema).optional())
+    .preprocess(parseCommaList, z.array(editorImageryLayerSchema).optional())
     .catch(undefined),
   /** Photo geometry filter; omitted = flat + pano. */
   photoTypes: z.preprocess(
@@ -190,6 +193,22 @@ export const mapSearchSchema = z.object({
       .array(editorPhotoTypeSchema)
       .default([...DEFAULT_PHOTO_TYPES])
       .catch([...DEFAULT_PHOTO_TYPES]),
+  ),
+  /** Traffic sign groups shown by the signs layer; omitted = parking and bike. */
+  signGroups: z.preprocess(
+    parseCommaList,
+    z
+      .array(signGroupSchema)
+      .default([...DEFAULT_SIGN_GROUPS])
+      .catch([...DEFAULT_SIGN_GROUPS]),
+  ),
+  /**
+   * Selected Mapillary map feature (sign) while the viewer shows its photos. The router parses
+   * the numeric id to a number (safe below 2^53, like today's ids), so turn it back to a string.
+   */
+  feature: z.preprocess(
+    (raw) => (typeof raw === 'number' ? String(raw) : raw),
+    z.string().optional().catch(undefined),
   ),
   /** Capture-date filter (`from/to` ISO dates, slim `from/to` string in URL). */
   photoDate: z
@@ -240,6 +259,10 @@ export function serializeMapSearch(
     photoTypes: isDefaultPhotoTypes(search.photoTypes)
       ? undefined
       : (search.photoTypes?.join(',') ?? undefined),
+    signGroups: isDefaultSignGroups(search.signGroups)
+      ? undefined
+      : (search.signGroups?.join(',') ?? undefined),
+    feature: search.feature || undefined,
     photoDate: (() => {
       if (!search.photoDate) return undefined
       if (search.photoDate.all) return 'all'
