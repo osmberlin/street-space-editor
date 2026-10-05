@@ -170,7 +170,14 @@ export const MapillaryPanel = ({
           ...(image.creatorUsername ? { creatorName: image.creatorUsername } : {}),
         })
 
-        actions.setPov({ lngLat: [position.lng, position.lat] })
+        // A flat photo looks where its camera looked: set that right away, so the map's cone does
+        // not show the previous photo's direction until the viewer's first `bearing` event.
+        const isFlat = image.cameraType !== 'spherical' && image.cameraType !== 'equirectangular'
+        const compass = image.computedCompassAngle ?? image.compassAngle
+        actions.setPov({
+          lngLat: [position.lng, position.lat],
+          ...(isFlat && compass != null ? { bearing: compass } : {}),
+        })
         emitEaseMapToPoint(position.lng, position.lat)
       }
 

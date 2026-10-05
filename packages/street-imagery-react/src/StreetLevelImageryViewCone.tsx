@@ -62,6 +62,12 @@ export const StreetLevelImageryViewCone = ({
   } else if (selectedPhoto.providerId === 'panoramax') {
     bearing = viewerPov?.bearing ?? selectedPhoto.heading
     fov = 30
+  } else if (selectedPhoto.providerId === 'mapillary') {
+    // The heading of the map tiles is the camera's own compass reading, which is often far off
+    // (e.g. north for a photo along a street). The viewer reports the direction Mapillary computed
+    // from the image, as mapillary.com shows it.
+    bearing = viewerPov?.bearing ?? selectedPhoto.heading
+    fov = viewerPov?.hfov ?? 30
   } else {
     bearing = selectedPhoto.heading
     fov = 30
