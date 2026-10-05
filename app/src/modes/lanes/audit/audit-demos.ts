@@ -6,6 +6,7 @@ export type FixtureGroupId =
   | 'islands'
   | 'field'
   | 'berlin'
+  | 'berlin-more'
   | 'bike'
   | 'width'
 
@@ -46,6 +47,26 @@ const FIXTURE_GROUPS: readonly {
       'seestrasse-merge-lane-drop',
       'hermannstrasse-placement-forward',
       'nahmitzer-damm-double-left',
+    ],
+  },
+  {
+    id: 'berlin-more',
+    label: 'Berlin cases: access, buses, open problems',
+    fixtureIds: [
+      'gertraudenstrasse-share-busway',
+      'contraflow-without-lane',
+      'unter-den-eichen-lane-access',
+      'dudenstrasse-bus-lane-backward',
+      'sickingenbruecke-cycle-lane-forward',
+      'bergstrasse-shared-lane',
+      'kaiserin-augusta-allee-direction-flip',
+      'tegeler-weg-four-to-two',
+      'falkenseer-chaussee-width-change',
+      'grosser-stern-roundabout',
+      'am-tierpark-u-turn-lane',
+      'schoenholzer-strasse-change-lanes',
+      'teltower-damm-track-and-lane',
+      'steglitzer-damm-crossing',
     ],
   },
   {
