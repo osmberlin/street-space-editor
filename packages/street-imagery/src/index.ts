@@ -25,6 +25,7 @@ export {
   type DateRange,
   type PhotoTypeFilter,
 } from './filters/searchFilters'
+export * from './filters/dateSlider'
 export { alignLineToPoints } from './map/alignLine'
 export * from './map/ageSteps'
 export * from './map/styleColors'

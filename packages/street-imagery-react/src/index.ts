@@ -64,5 +64,10 @@ export {
   useStreetImageryI18n,
   type StreetImageryMessageOverrides,
 } from './i18n/StreetImageryLocaleProvider'
+export {
+  PhotoDateRangeFilter,
+  type PhotoDateMarker,
+  type PhotoDateRangeFilterProps,
+} from './filters/PhotoDateRangeFilter'
 export { PhotoDate } from './i18n/PhotoDate'
 export { PhotoCount } from './i18n/PhotoCount'

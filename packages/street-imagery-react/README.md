@@ -140,6 +140,26 @@ const { data, shownImage, firstImage } = useSelectedMapillaryFeature({
 
 A click on a sign dot: `queryStreetImageryFeatures(event).find((hit) => hit.kind === 'mapFeature')?.featureId`.
 
+## Date filter with a slider
+
+`PhotoDateRangeFilter` is the date filter of iD's photo panel as a controlled component: one slider with two handles on a scale that gives recent years more room. It works on plain `{ from?, to? }` days (`YYYY-MM-DD`), the same `DateRange` the layers take as `filter.date`.
+
+```tsx
+const { photos } = useAllProviderPhotos(providers, bbox, zoom) // no date: all photos in view
+
+<PhotoDateRangeFilter
+  value={date}
+  onChange={setDate} // on release of a handle, not while dragging
+  capturedAt={photos.map((photo) => photo.capturedAt)} // marks: where photos are
+  yearLines={[1, 2, 3, 4]} // lines with a label; a click shows the last N years
+  recommendedMaxAgeYears={2} // this line is red
+  markers={[{ date: '2024-04-01', label: 'Survey start' }]} // dashed lines for fixed dates
+  dateInputs="collapsed" // exact days: 'collapsed' (default), 'open' or 'none'
+/>
+```
+
+A handle at its end means no limit, so the left end also shows photos older than the slider spans (`maxYears`, default 10). The scale itself is in the core package (`dateSliderPosition`, `dateSliderBins`, …) for a host that draws its own chart. The texts are in `messages.dateFilter`.
+
 ## Pick a place on the map to open elsewhere
 
 A button arms a location opener (see `@osm-editor-kit/street-imagery`), the next map click opens the clicked place in that service and disarms; Escape cancels.

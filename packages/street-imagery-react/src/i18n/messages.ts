@@ -26,6 +26,24 @@ export type StreetImageryMessages = {
   /** Eight compass points, clockwise from north: N, NE, E, SE, S, SW, W, NW. */
   compass: readonly string[]
   unknownDate: string
+  dateFilter: {
+    allDates: string
+    /** e.g. "Since 5 Oct 2024". */
+    since: (date: string) => string
+    until: (date: string) => string
+    between: (from: string, to: string) => string
+    /** Short label below a year line, e.g. "2 y". */
+    yearsShort: (years: number) => string
+    /** Tooltip of a year label; a click shows the photos of the last `years` years. */
+    lastYears: (years: number) => string
+    recommendedMaxAge: (years: number) => string
+    fromHandle: string
+    toHandle: string
+    exactDates: string
+    from: string
+    to: string
+    photoCount: (count: number) => string
+  }
   /** e.g. "Start, looking along the street"; `role` is the viewpoint's label. */
   viewDirection: (role: string, kind: ViewDirection['kind']) => string
 }
@@ -45,6 +63,22 @@ const en: StreetImageryMessages = {
     nextPhotoOfView: (label) => `${label} — click for the next photo`,
   },
   unknownDate: 'Unknown date',
+  dateFilter: {
+    allDates: 'All dates',
+    since: (date) => `Since ${date}`,
+    until: (date) => `Until ${date}`,
+    between: (from, to) => `${from} – ${to}`,
+    yearsShort: (years) => `${years} y`,
+    lastYears: (years) => (years === 1 ? 'Show the last year' : `Show the last ${years} years`),
+    recommendedMaxAge: (years) =>
+      `Recommended: photos of the last ${years === 1 ? 'year' : `${years} years`}`,
+    fromHandle: 'Oldest photos to show',
+    toHandle: 'Newest photos to show',
+    exactDates: 'Exact dates',
+    from: 'From',
+    to: 'To',
+    photoCount: (count) => (count === 1 ? '1 photo' : `${count} photos`),
+  },
   viewpointRole: {
     here: 'Here',
     'line-start': 'Start',
@@ -89,6 +123,23 @@ const de: StreetImageryMessages = {
     nextPhotoOfView: (label) => `${label} — klicken für das nächste Foto`,
   },
   unknownDate: 'Datum unbekannt',
+  dateFilter: {
+    allDates: 'Alle Daten',
+    since: (date) => `Seit ${date}`,
+    until: (date) => `Bis ${date}`,
+    between: (from, to) => `${from} – ${to}`,
+    yearsShort: (years) => `${years} J.`,
+    lastYears: (years) =>
+      years === 1 ? 'Das letzte Jahr zeigen' : `Die letzten ${years} Jahre zeigen`,
+    recommendedMaxAge: (years) =>
+      `Empfohlen: Fotos ${years === 1 ? 'des letzten Jahres' : `der letzten ${years} Jahre`}`,
+    fromHandle: 'Älteste Fotos, die gezeigt werden',
+    toHandle: 'Neueste Fotos, die gezeigt werden',
+    exactDates: 'Genaue Daten',
+    from: 'Von',
+    to: 'Bis',
+    photoCount: (count) => (count === 1 ? '1 Foto' : `${count} Fotos`),
+  },
   viewpointRole: {
     here: 'Hier',
     'line-start': 'Anfang',

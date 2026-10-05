@@ -30,6 +30,7 @@ const mergeMessages = (
   overrides
     ? {
         unknownDate: overrides.unknownDate ?? base.unknownDate,
+        dateFilter: { ...base.dateFilter, ...overrides.dateFilter },
         viewer: { ...base.viewer, ...overrides.viewer },
         viewpointRole: { ...base.viewpointRole, ...overrides.viewpointRole },
         compass: overrides.compass?.length === 8 ? overrides.compass : base.compass,
