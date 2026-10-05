@@ -1,3 +1,4 @@
+import type { NormalizedPhoto } from '../providers/model'
 import { bearingDeg, distanceMeters, type LngLat } from '../viewpoints/geometry'
 
 /**
@@ -241,3 +242,15 @@ export const cameraPitch = (rotation: readonly number[]): number => {
   const up = Math.cos(angle) + (1 - Math.cos(angle)) * kz * kz
   return (Math.asin(Math.max(-1, Math.min(1, up))) * 180) / Math.PI
 }
+
+/** The Mapillary photo of a target image, for the viewer and the map's photo selection. */
+export const targetImageToPhoto = (image: TargetImage): NormalizedPhoto => ({
+  providerId: 'mapillary',
+  photoId: image.id,
+  sequenceId: null,
+  capturedAt: image.capturedAt,
+  isPano: image.isPano,
+  heading: null,
+  lngLat: image.lngLat,
+  ...(image.originalLngLat ? { originalLngLat: image.originalLngLat } : {}),
+})

@@ -117,9 +117,28 @@ const { data: detections } = useMapillaryImageDetections(photo.photoId, {
 <StreetLevelImageryViewer photo={photo} outlines={detections?.map((d) => ({ id: d.id, outline: d.outline }))} … />
 ```
 
-- Map layers: `filter.mapFeatureValue` limits which signs/objects are drawn (`matchesAnyGroup(SIGN_GROUPS)`).
+- Map layers: `filter.mapFeatureValue` limits which signs/objects are drawn: `signGroupFilter(['parking', 'bike'])` for sign groups, or `matchesAnyGroup(…)`.
 - Suggested views: `useViewSuggestions(viewpoints, { sources: [mapillaryPhotoSource, streetViewPhotoSource] })`.
 - `turnMapillaryViewerTo` / `setMapillaryViewerOutlines` work on a mapillary-js `Viewer` you own.
+
+## A selected sign: viewer, bar and map highlight
+
+Keep the selected sign (`featureId`) and its shown photo in your own state or URL:
+
+```tsx
+const { data, shownImage, firstImage } = useSelectedMapillaryFeature({
+  featureId,
+  shownPhotoId, // the photo the viewer shows now
+  minCapturedAt: fromMs, // optional: open the best photo from this time on
+})
+// Open `firstImage` first: showPhoto(targetImageToPhoto(firstImage))
+<MapillaryFeatureBar data={data} shownImage={shownImage} onShow={(image) => showPhoto(targetImageToPhoto(image))} />
+<StreetLevelImageryViewer lookAt={{ lngLat: data.feature.lngLat, outline: shownImage?.outline, value: data.feature.value }} … />
+// On the map, after StreetLevelImagerySourcesAndLayers: the sign's halo and a line from the camera
+<SelectedMapFeatureLayer data={data} shownImage={shownImage} providers={providers} bbox={bbox} zoom={zoom} />
+```
+
+A click on a sign dot: `queryStreetImageryFeatures(event).find((hit) => hit.kind === 'mapFeature')?.featureId`.
 
 ## Pick a place on the map to open elsewhere
 

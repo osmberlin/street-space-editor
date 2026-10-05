@@ -23,6 +23,7 @@ export {
   type PhotoTypeFilter,
 } from './filters/searchFilters'
 export { alignLineToPoints } from './map/alignLine'
+export * from './map/ageSteps'
 export * from './map/styleColors'
 export {
   coneRadiusMeters,

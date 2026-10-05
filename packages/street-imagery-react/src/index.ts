@@ -49,6 +49,10 @@ export {
 export * from './mapillary/useMapillaryFeatures'
 export { LocationPickOnMap, type LocationPickOnMapProps } from './openers/LocationPickOnMap'
 export * from './openers/useLocationPickStore'
+export {
+  SelectedMapFeatureLayer,
+  type SelectedMapFeatureLayerProps,
+} from './mapillary/SelectedMapFeatureLayer'
 export { MapillaryFeatureBar, type MapillaryFeatureBarProps } from './mapillary/MapillaryFeatureBar'
 export {
   MAPILLARY_FEATURE_BAR_LABELS,

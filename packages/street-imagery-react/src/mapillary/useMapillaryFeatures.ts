@@ -1,5 +1,6 @@
 import {
   bboxAround,
+  bestTargetImage,
   distanceMeters,
   fetchImageDetections,
   fetchMapFeatureImages,
@@ -72,3 +73,31 @@ export const useMapillaryImageDetections = (
     enabled: !!imageId,
     staleTime: STALE_TIME,
   })
+
+/**
+ * A selected Mapillary map feature (sign, object) for a host's feature + photo selection: all its
+ * photos by day, the photo that is shown (`shownPhotoId`), and the one to open first — the best of
+ * the newest day, from within `minCapturedAt` (ms) when set. Feed `data` and `shownImage` to
+ * `MapillaryFeatureBar` and `SelectedMapFeatureLayer`, and `shownImage.outline` to `lookAt`.
+ */
+export const useSelectedMapillaryFeature = ({
+  featureId,
+  shownPhotoId,
+  minCapturedAt,
+  shape,
+}: {
+  featureId: string | null | undefined
+  shownPhotoId?: string | null
+  minCapturedAt?: number | null
+  shape?: TargetShape
+}) => {
+  const { data, isLoading, isError } = useMapillaryMapFeatureImages(featureId, { shape })
+  const shownImage = data?.images.find((image) => image.id === shownPhotoId) ?? null
+  const firstImage = data
+    ? (bestTargetImage(data.images, data.feature.lngLat, {
+        minCapturedAt: minCapturedAt ?? undefined,
+        shape,
+      }) ?? null)
+    : null
+  return { data: data ?? null, isLoading, isError, shownImage, firstImage }
+}

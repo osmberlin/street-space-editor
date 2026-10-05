@@ -73,7 +73,9 @@ import {
   JUNCTION_FEATURE_GROUPS, // traffic lights, bicycle symbols, stop lines, arrows, crosswalks
   mapillaryImagesOfTags, // image ids in OSM tags (`mapillary`, `cycleway:right:mapillary`, …)
   matchesAnyGroup,
-  SIGN_GROUPS, // bike, speed, access
+  SIGN_GROUPS, // parking, bike, speed, access (and `other` for the rest)
+  signGroupFilter, // `['parking', 'bike']` → `filter.mapFeatureValue` of the map layers
+  targetImageToPhoto, // a TargetImage as the Mapillary photo to show
 } from '@osm-editor-kit/street-imagery'
 
 // What is at this junction?
@@ -94,6 +96,15 @@ await fetchImageDetections(imageId, { filter: matchesAnyGroup(JUNCTION_DETECTION
 - **Two positions per image**: `lngLat` is Mapillary's computed position (map features are located from it), `originalLngLat` the camera's GPS position. Computed matches detections better but is sometimes far off.
 - **Own captures**: photos carry `creatorId` and `organizationId`; `createMapillaryHighlightResolver` resolves usernames and organization slugs to them.
 - **No surface colour**: Mapillary has no colour attribute on features or detections.
+
+## Age colors
+
+`createAgeSteps()` splits photo age into fixed steps from a time: older than 4 years, 2–4 years, newer than 2 years (TILDA palette). Thresholds are `years` or exact times (`starts`), colors and ids are options; use it where a project needs specific dates. `ageStepColorExpression(steps, { property })` is the MapLibre `circle-color` (`capturedAt` for photos, `lastSeenAt` for map features), `ageStepMatchExpression` and `countByAgeStep` serve legends. `MAX_USEFUL_AGE_YEARS` (4) is the age beyond which photos are rarely useful; hosts can hide them by default. For steps that follow a "from" filter instead, use `ageBandColorExpression`.
+
+```ts
+const steps = createAgeSteps({ now: LOADED_AT }) // or { starts: [Date.UTC(2023, 0, 1)] }
+const photoCircleColor = ageStepColorExpression(steps)
+```
 
 ## Viewpoints and other providers
 

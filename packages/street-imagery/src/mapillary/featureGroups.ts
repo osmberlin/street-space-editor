@@ -21,20 +21,33 @@ export const isSignValue = (value: string): boolean =>
 /** `regulatory--maximum-speed-limit-30--g1` → `maximum-speed-limit-30`. */
 export const signName = (value: string): string => value.split('--')[1] ?? value
 
-/** Matches `namePattern` inside the sign's name (the part between the first two `--`). */
-const signGroup = (id: string, label: string, namePattern: string): MapFeatureGroup => ({
+/**
+ * Matches `namePattern` inside the sign's name (the part between the first two `--`), unless the
+ * name also has `exceptPattern`.
+ */
+const signGroup = (
+  id: string,
+  label: string,
+  namePattern: string,
+  exceptPattern?: string,
+): MapFeatureGroup => ({
   id,
   label,
   pattern: new RegExp(
-    `^(?:regulatory|warning|information|complementary)--(?:(?!--).)*(?:${namePattern})`,
+    `^(?:regulatory|warning|information|complementary)--${
+      exceptPattern ? `(?!(?:(?!--).)*(?:${exceptPattern}))` : ''
+    }(?:(?!--).)*(?:${namePattern})`,
   ),
 })
 
 /**
- * Traffic sign groups. In Berlin (2026-09) 79 % of the detected signs are in none of them
- * (parking, direction signs); use `OTHER_SIGNS_GROUP_ID` for those.
+ * Traffic sign groups. In Berlin (2026-09) most detected signs are in none of them (direction
+ * and warning signs, …); use `OTHER_SIGNS_GROUP_ID` for those.
  */
 export const SIGN_GROUPS: MapFeatureGroup[] = [
+  // Bicycle parking is a bike sign, not a parking restriction. No lookbehind: a browser without
+  // it would fail to load the whole module.
+  signGroup('parking', 'Parking & stopping', 'parking|stopping', '(?:bicycle|bike)-parking'),
   signGroup('bike', 'Bike', 'bicycl|bike|cyclist|cycling|pedestrians-only'),
   signGroup('speed', 'Speed', 'speed|living-street|built-up-area'),
   signGroup(
@@ -45,6 +58,10 @@ export const SIGN_GROUPS: MapFeatureGroup[] = [
 ]
 
 export const OTHER_SIGNS_GROUP_ID = 'other'
+
+/** Ids of `SIGN_GROUPS` plus `other`, in display order. */
+export const SIGN_GROUP_IDS = ['parking', 'bike', 'speed', 'access', OTHER_SIGNS_GROUP_ID] as const
+export type SignGroupId = (typeof SIGN_GROUP_IDS)[number]
 
 /** Objects and markings that matter at junctions. */
 export const JUNCTION_FEATURE_GROUPS: MapFeatureGroup[] = [
@@ -110,4 +127,27 @@ export const countByGroup = <T extends { value: string }>(
     }
   }
   return counts
+}
+
+const signFilterCache = new Map<string, (value: string) => boolean>()
+
+/**
+ * Filter for `filter.mapFeatureValue`: signs of the chosen groups pass; other objects always do.
+ * `undefined` when all groups are chosen (no filtering). The function is cached per selection, so
+ * its identity is stable and layers do not re-render on every call.
+ */
+export const signGroupFilter = (
+  groups: readonly string[],
+): ((value: string) => boolean) | undefined => {
+  if (SIGN_GROUP_IDS.every((id) => groups.includes(id))) {
+    return undefined
+  }
+  const key = [...groups].sort().join(',')
+  let filter = signFilterCache.get(key)
+  if (!filter) {
+    const chosen = new Set(groups)
+    filter = (value) => !isSignValue(value) || signGroupIds(value).some((id) => chosen.has(id))
+    signFilterCache.set(key, filter)
+  }
+  return filter
 }

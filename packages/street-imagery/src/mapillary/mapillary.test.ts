@@ -5,6 +5,9 @@ import {
   countByGroup,
   JUNCTION_FEATURE_GROUPS,
   mapFeatureGroupIds,
+  SIGN_GROUP_IDS,
+  SIGN_GROUPS,
+  signGroupFilter,
   signGroupIds,
   signName,
 } from './featureGroups'
@@ -55,11 +58,32 @@ describe('featureGroups', () => {
     expect(signName('regulatory--maximum-speed-limit-30--g1')).toBe('maximum-speed-limit-30')
     expect(signGroupIds('regulatory--maximum-speed-limit-30--g1')).toEqual(['speed'])
     expect(signGroupIds('regulatory--bicycles-only--g1')).toEqual(['bike'])
-    expect(signGroupIds('regulatory--no-parking--g2')).toEqual(['other'])
+    expect(signGroupIds('regulatory--no-parking--g2')).toEqual(['parking'])
+    expect(signGroupIds('information--parking--g1')).toEqual(['parking'])
+    expect(signGroupIds('regulatory--no-stopping--g2')).toEqual(['parking'])
+    expect(signGroupIds('regulatory--bicycle-parking--g1')).toEqual(['bike'])
+    expect(signGroupIds('information--bike-parking--g1')).toEqual(['bike'])
+    expect(signGroupIds('regulatory--no-parking-or-no-stopping--g1')).toEqual(['parking'])
+    expect(signGroupIds('warning--curve-left--g1')).toEqual(['other'])
     expect(signGroupIds('object--bench')).toEqual([])
     expect(
       mapFeatureGroupIds('object--traffic-light--pedestrians-front', JUNCTION_FEATURE_GROUPS),
     ).toEqual(['traffic-light'])
+  })
+
+  it('lists the sign group ids', () => {
+    expect(SIGN_GROUP_IDS).toEqual([...SIGN_GROUPS.map((group) => group.id), 'other'])
+  })
+
+  it('filters signs by group and lets objects pass', () => {
+    expect(signGroupFilter(SIGN_GROUP_IDS)).toBeUndefined()
+    const filter = signGroupFilter(['parking', 'bike'])
+    expect(filter?.('regulatory--no-parking--g2')).toBe(true)
+    expect(filter?.('regulatory--bicycles-only--g1')).toBe(true)
+    expect(filter?.('regulatory--maximum-speed-limit-30--g1')).toBe(false)
+    expect(filter?.('warning--curve-left--g1')).toBe(false)
+    expect(filter?.('object--bench')).toBe(true)
+    expect(signGroupFilter(['bike', 'parking'])).toBe(filter)
   })
 
   it('counts features per group', () => {
