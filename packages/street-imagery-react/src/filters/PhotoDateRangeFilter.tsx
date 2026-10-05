@@ -123,6 +123,14 @@ export const PhotoDateRangeFilter = ({
     }
   }
 
+  // React also sends the release (`change`) here, after the commit above; that must not start a
+  // new drag.
+  const trackDrag = (moved: 'from' | 'to', event: Event) => {
+    if (event.type === 'input') {
+      setDragged(readPositions(moved))
+    }
+  }
+
   const bins = capturedAt ? dateSliderBins(capturedAt, scale, BINS) : []
   const maxCount = Math.max(1, ...bins)
 
@@ -234,8 +242,8 @@ export const PhotoDateRangeFilter = ({
           className={HANDLE_CLASS}
           max={1}
           min={0}
-          onChange={() => {
-            setDragged(readPositions('from'))
+          onChange={(event) => {
+            trackDrag('from', event.nativeEvent)
           }}
           ref={(input) => {
             fromInput.current = input
@@ -251,8 +259,8 @@ export const PhotoDateRangeFilter = ({
           className={HANDLE_CLASS}
           max={1}
           min={0}
-          onChange={() => {
-            setDragged(readPositions('to'))
+          onChange={(event) => {
+            trackDrag('to', event.nativeEvent)
           }}
           ref={(input) => {
             toInput.current = input
