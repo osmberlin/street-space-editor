@@ -210,10 +210,14 @@ export type FloatingPhotoViewerProps = {
   onSelectSuggestion: (suggestion: ViewSuggestion, candidate: PhotoCandidate) => void
   /** The photo in the viewer, so the active view can show which of its photos that is. */
   shownPhotoId?: string | null
-  canGoBack: boolean
-  canGoForward: boolean
-  onBack: () => void
-  onForward: () => void
+  /**
+   * History of shown photos: the back and forward buttons and the keys [ and ]. Leave out
+   * `onBack` and `onForward` for a host without a history; the buttons are then not shown.
+   */
+  canGoBack?: boolean
+  canGoForward?: boolean
+  onBack?: () => void
+  onForward?: () => void
   onClose: () => void
   /**
    * Step to the neighbouring photo, e.g. along the clicked street: the `<` `>` buttons at the
@@ -258,8 +262,8 @@ export const FloatingPhotoViewer = ({
   activeDirectionKey,
   onSelectSuggestion,
   shownPhotoId,
-  canGoBack,
-  canGoForward,
+  canGoBack = false,
+  canGoForward = false,
   onBack,
   onForward,
   onClose,
@@ -306,9 +310,9 @@ export const FloatingPhotoViewer = ({
     if (event.key === 'Escape') {
       onClose()
     } else if (event.key === '[' && canGoBack) {
-      onBack()
+      onBack?.()
     } else if (event.key === ']' && canGoForward) {
-      onForward()
+      onForward?.()
     } else if (event.key === 'ArrowLeft' && event.altKey) {
       step?.onPrevious?.()
     } else if (event.key === 'ArrowRight' && event.altKey) {
@@ -425,16 +429,24 @@ export const FloatingPhotoViewer = ({
           <h2 className="min-w-0 truncate px-1 text-sm font-semibold text-slate-800">{title}</h2>
           {titleActions}
         </div>
-        <ToolbarButton disabled={!canGoBack} label={messages.viewer.backInHistory} onClick={onBack}>
-          <Icon path={ICONS.undo} />
-        </ToolbarButton>
-        <ToolbarButton
-          disabled={!canGoForward}
-          label={messages.viewer.forwardInHistory}
-          onClick={onForward}
-        >
-          <Icon path={ICONS.redo} />
-        </ToolbarButton>
+        {onBack && onForward ? (
+          <>
+            <ToolbarButton
+              disabled={!canGoBack}
+              label={messages.viewer.backInHistory}
+              onClick={onBack}
+            >
+              <Icon path={ICONS.undo} />
+            </ToolbarButton>
+            <ToolbarButton
+              disabled={!canGoForward}
+              label={messages.viewer.forwardInHistory}
+              onClick={onForward}
+            >
+              <Icon path={ICONS.redo} />
+            </ToolbarButton>
+          </>
+        ) : null}
         <ToolbarButton
           label={messages.viewer.minimize}
           onClick={() => updateLayout({ ...layout, minimized: true })}
