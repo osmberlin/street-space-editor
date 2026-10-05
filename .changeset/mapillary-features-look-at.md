@@ -1,6 +1,6 @@
 ---
-"@osm-editor-kit/street-imagery": patch
-"@osm-editor-kit/street-imagery-react": patch
+'@osm-editor-kit/street-imagery': patch
+'@osm-editor-kit/street-imagery-react': patch
 ---
 
 ### @osm-editor-kit/street-imagery
