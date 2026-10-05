@@ -10,8 +10,10 @@ export {
 } from './config'
 export * from './data/geojson'
 export {
+  assertIsoDate,
   buildMapFeatureLayerFilter,
   buildPhotoLayerFilter,
+  isIsoDate,
   mapFeatureMatchesDateRange,
   normalizeDateRange,
   parseIsoDateEndMs,

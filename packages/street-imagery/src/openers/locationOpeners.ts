@@ -1,4 +1,5 @@
 import { peekStreetImageryConfig } from '../config'
+import { assertIsoDate, parseIsoDateStartMs } from '../filters/searchFilters'
 import {
   bestTargetImage,
   panoX,
@@ -43,6 +44,11 @@ export type OpenTarget = {
   lngLat: LngLat
   /** Map zoom, for services that open on a map. */
   zoom?: number
+  /**
+   * Show only photos from this day on (`YYYY-MM-DD`). Mapillary only: the other services have no
+   * such link param and ignore it. Throws when it is not a real day.
+   */
+  dateFrom?: string
 }
 
 export type LocationOpener = {
@@ -77,11 +83,16 @@ const round = (value: number, digits: number) => Number(value.toFixed(digits))
 export const mapillaryLookAtUrl = (
   photos: readonly NormalizedPhoto[],
   target: LngLat,
+  { dateFrom }: { dateFrom?: string } = {},
 ): string | null => {
+  const fromMs = dateFrom == null ? null : parseIsoDateStartMs(assertIsoDate(dateFrom))
   const headingById = new Map<string, number>()
   const images: TargetImage[] = []
   for (const photo of photos) {
     if (photo.capturedAt == null || photo.heading == null) {
+      continue
+    }
+    if (fromMs != null && photo.capturedAt < fromMs) {
       continue
     }
     const isPano = photo.isPano === true
@@ -109,6 +120,9 @@ export const mapillaryLookAtUrl = (
       `y=${round(view.center[1], 4)}`,
       `zoom=${round(view.zoom, 2)}`,
     )
+  }
+  if (dateFrom != null) {
+    params.push(`dateFrom=${dateFrom}`)
   }
   return `https://www.mapillary.com/app/?${params.join('&')}`
 }
@@ -138,16 +152,19 @@ const providerOpener = (id: (typeof PROVIDER_OPENER_IDS)[number]): LocationOpene
   color: providerById[id].color,
   isAvailable: () => true,
   requiresAccount: false,
-  locationUrl: ({ lngLat: [lng, lat], zoom }) => providerLocationLink(id, lat, lng, zoom),
+  locationUrl: ({ lngLat: [lng, lat], zoom, dateFrom }) =>
+    providerLocationLink(id, lat, lng, zoom, { dateFrom }),
 })
 
 const mapillaryOpener: LocationOpener = {
   ...providerOpener('mapillary'),
-  lookAtUrl: async ({ lngLat }, signal) => {
+  lookAtUrl: async ({ lngLat, dateFrom }, signal) => {
     if (!peekStreetImageryConfig()?.mapillaryToken) {
       return null
     }
-    return mapillaryLookAtUrl(await fetchMapillaryImagesNearPoint(lngLat, {}, signal), lngLat)
+    return mapillaryLookAtUrl(await fetchMapillaryImagesNearPoint(lngLat, {}, signal), lngLat, {
+      dateFrom,
+    })
   },
 }
 

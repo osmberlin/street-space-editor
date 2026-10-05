@@ -40,6 +40,21 @@ describe('getLocationOpeners', () => {
     }
   })
 
+  it('passes a start date to Mapillary only', () => {
+    const place = { lngLat: target, zoom: 17, dateFrom: '2023-10-05' }
+    expect(findLocationOpener('mapillary')?.locationUrl(place)).toBe(
+      'https://www.mapillary.com/app/?lat=52.51704&lng=13.38886&z=17&focus=map&dateFrom=2023-10-05',
+    )
+    expect(findLocationOpener('panoramax')?.locationUrl(place)).not.toContain('2023')
+  })
+
+  it('throws on a start date that is not a real day', () => {
+    const mapillary = findLocationOpener('mapillary')
+    for (const dateFrom of ['2023-13-01', '2023-02-30', '05.10.2023', '2023-10-05T00:00:00Z', '']) {
+      expect(() => mapillary?.locationUrl({ lngLat: target, dateFrom })).toThrow('YYYY-MM-DD')
+    }
+  })
+
   it('has one infra3D opener per project, named after it', () => {
     const openers = getLocationOpeners().filter((opener) => opener.id.startsWith('infra3d:'))
     expect(openers.map((opener) => opener.label)).toEqual([
@@ -100,6 +115,20 @@ describe('mapillaryLookAtUrl', () => {
     expect(mapillaryLookAtUrl([away], target)).toBeNull()
     expect(mapillaryLookAtUrl([away, towards], target)).toBe(
       'https://www.mapillary.com/app/?pKey=towards&focus=photo',
+    )
+  })
+
+  it('skips images from before the start date and keeps the date in the link', () => {
+    const old = photo({
+      photoId: 'old',
+      heading: 0,
+      lngLat: south,
+      capturedAt: Date.parse('2022-06-01'),
+    })
+    const recent = photo({ photoId: 'recent', heading: 0, lngLat: south })
+    expect(mapillaryLookAtUrl([old], target, { dateFrom: '2023-10-05' })).toBeNull()
+    expect(mapillaryLookAtUrl([old, recent], target, { dateFrom: '2023-10-05' })).toBe(
+      'https://www.mapillary.com/app/?pKey=recent&focus=photo&dateFrom=2023-10-05',
     )
   })
 

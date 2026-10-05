@@ -11,6 +11,23 @@ export const parseIsoDateStartMs = (isoDate: string): number => {
   return Date.UTC(year!, month! - 1, day!)
 }
 
+/** `true` for a real calendar day written as `YYYY-MM-DD`. */
+export const isIsoDate = (value: string): boolean => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false
+  }
+  // `Date.UTC` rolls over days that do not exist (2026-02-30 becomes March 2).
+  return new Date(parseIsoDateStartMs(value)).toISOString().slice(0, 10) === value
+}
+
+/** Returns the day unchanged; throws when it is not a real `YYYY-MM-DD` day. */
+export const assertIsoDate = (value: string): string => {
+  if (!isIsoDate(value)) {
+    throw new Error(`Invalid date "${value}". Expected a day as YYYY-MM-DD.`)
+  }
+  return value
+}
+
 export const parseIsoDateEndMs = (isoDate: string): number =>
   parseIsoDateStartMs(isoDate) + DAY_MS - 1
 

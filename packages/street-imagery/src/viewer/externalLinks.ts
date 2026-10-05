@@ -1,4 +1,5 @@
 import { getPanoramaxApiBase } from '../config'
+import { assertIsoDate } from '../filters/searchFilters'
 import { lookAroundDeepLink } from '../providers/adapters/lookaround'
 import type { NormalizedPhoto, ProviderId } from '../providers/model'
 
@@ -34,18 +35,29 @@ export const providerExternalLink = (photo: NormalizedPhoto): string => {
   }
 }
 
+export type ProviderLocationLinkOptions = {
+  /**
+   * Show only photos from this day on (`YYYY-MM-DD`). Mapillary only: the other services have no
+   * such link param and ignore it. Throws when it is not a real day.
+   */
+  dateFrom?: string
+}
+
 /** Deep link to a provider's viewer at a map location (no specific photo selected). */
 export const providerLocationLink = (
   providerId: ProviderId,
   lat: number,
   lng: number,
   zoom = 14,
+  { dateFrom }: ProviderLocationLinkOptions = {},
 ): string => {
   switch (providerId) {
     case 'mapillary':
     case 'mapillary-signs':
-    case 'mapillary-map-features':
-      return `https://www.mapillary.com/app/?lat=${lat}&lng=${lng}&z=17&focus=map`
+    case 'mapillary-map-features': {
+      const date = dateFrom == null ? '' : `&dateFrom=${assertIsoDate(dateFrom)}`
+      return `https://www.mapillary.com/app/?lat=${lat}&lng=${lng}&z=17&focus=map${date}`
+    }
     case 'panoramax':
       return `${getPanoramaxApiBase()}/?focus=map&map=${zoom}/${lat}/${lng}`
     case 'kartaview':
