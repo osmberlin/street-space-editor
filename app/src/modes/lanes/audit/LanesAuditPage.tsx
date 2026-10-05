@@ -369,9 +369,10 @@ function Legend(): ReactElement {
         </li>
         <li>Previous / next bands are dimmed relative to the current segment.</li>
         <li>
-          On dual carriageways the opposite branch’s real lanes render dimmed — they belong to a
-          different OSM way. That way’s centreline is the thinner secondary violet guide (with its
-          own way ↑/↓ when orientation is known).
+          On dual carriageways the lanes of the opposite carriageway render dimmed and are labelled
+          “Opposite carriageway” — they belong to a different OSM way. The wide violet line is the
+          selected way; it bends where the way continues into one carriageway of a split. The
+          thinner violet line is the opposite way.
         </li>
         <li>
           Explicit widths (<code className="font-mono text-[0.9em]">width:lanes</code>,{' '}
@@ -383,17 +384,16 @@ function Legend(): ReactElement {
         </li>
         <li>
           Kerbs are heavy strokes between sidewalk and carriageway; outer sidepath edges are
-          lighter; dashed hairlines mark segment boundaries and unmarked separators. Dual
-          carriageways leave the median as empty space with a grass (verge) or zebra (crossing)
-          icon; the opposite dual branch uses real lane slots when resolved (else a grey “Opposite
-          carriageway” placeholder). Turn pockets that grow into the median taper with an angled
-          kerb from the dual travel hinge.
+          lighter; dashed hairlines mark segment boundaries and unmarked separators. The median of a
+          dual carriageway is tinted green with a grass icon (verge) or light grey with zebra bars
+          (crossing island). Where the opposite carriageway is not known, only the selected one is
+          drawn. Kerbs, sidewalks and the median follow the curves where a street splits.
         </li>
         <li>
           <code className="font-mono text-[0.9em]">sidewalk:*=separate</code> /{' '}
-          <code className="font-mono text-[0.9em]">cycleway:*=separate</code> do not draw slots —
-          they appear as a short note under the diagram.{' '}
-          <code className="font-mono text-[0.9em]">no</code> /{' '}
+          <code className="font-mono text-[0.9em]">cycleway:*=separate</code> do not draw slots — a
+          dotted line with a footprints or bike icon next to the road edge marks them, plus a note
+          under the diagram. <code className="font-mono text-[0.9em]">no</code> /{' '}
           <code className="font-mono text-[0.9em]">none</code> produce no geometry at all.
         </li>
         <li>

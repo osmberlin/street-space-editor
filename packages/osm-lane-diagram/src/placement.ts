@@ -27,9 +27,17 @@ export function parsePlacement(value: string | undefined): Placement | null {
  * the median of traffic flow — not inside a turn lane.
  * `transition` falls back to the same default anchor when neighbours are unknown.
  */
-export function resolvePlacement(tags: Record<string, string>, laneCount: number): Placement {
+export function resolvePlacement(
+  tags: Record<string, string>,
+  laneCount: number,
+  /** Driving lanes left of the forward lanes (backward + both_ways), for `placement:forward`. */
+  directionCounts?: { backward: number; bothWays: number },
+): Placement {
   const parsed = parsePlacement(tags.placement)
   if (parsed && parsed.kind !== 'transition') return parsed
+
+  const directional = resolveDirectionalPlacement(tags, directionCounts)
+  if (directional) return directional
 
   const backward = Number.parseInt(tags['lanes:backward'] ?? '', 10)
   const forward = Number.parseInt(tags['lanes:forward'] ?? '', 10)
@@ -48,6 +56,33 @@ export function resolvePlacement(tags: Record<string, string>, laneCount: number
     return { kind: 'middle_of', lane: Math.ceil(laneCount / 2) }
   }
   return { kind: 'left_of', lane: laneCount / 2 + 1 }
+}
+
+/**
+ * `placement:forward` / `placement:backward` count the lanes of one direction only.
+ * Convert to the left-to-right index over all driving lanes. Backward lanes are counted
+ * from the left as seen in backward travel, so both the index and the side flip.
+ */
+function resolveDirectionalPlacement(
+  tags: Record<string, string>,
+  counts?: { backward: number; bothWays: number },
+): Placement | null {
+  if (!counts) return null
+  const forward = parsePlacement(tags['placement:forward'])
+  if (forward && forward.kind !== 'transition') {
+    return { kind: forward.kind, lane: counts.backward + counts.bothWays + forward.lane }
+  }
+  const backward = parsePlacement(tags['placement:backward'])
+  if (backward && backward.kind !== 'transition' && backward.lane <= counts.backward) {
+    const kind =
+      backward.kind === 'left_of'
+        ? 'right_of'
+        : backward.kind === 'right_of'
+          ? 'left_of'
+          : 'middle_of'
+    return { kind, lane: counts.backward - backward.lane + 1 }
+  }
+  return null
 }
 
 /**

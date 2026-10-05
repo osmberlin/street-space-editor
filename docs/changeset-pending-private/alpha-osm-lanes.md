@@ -13,3 +13,4 @@ Core features to date:
 - Validation warnings for count/pipe mismatches, bike-in-pipes patterns, and placement out-of-range
 - Soft width reconciliation: kerb-to-kerb `width`/`est_width` vs `width:lanes`, on-carriageway parking, cycleway buffers, and DE paint estimate
 - Slot editing helpers: add/remove lanes, sync counts from slots, editable direction filtering
+- Only `designated` in `bus:lanes` / `psv:lanes` / `bicycle:lanes` makes a bus or cycle lane; `yes` stays a normal lane

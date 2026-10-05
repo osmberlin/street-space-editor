@@ -129,6 +129,18 @@ export type SceneSegmentBand = {
   synthetic?: boolean
   /** Synthetic placeholder where pure-turn pockets end at an implied junction. */
   junction?: boolean
+  /**
+   * Sidewalks / cycleways tagged `separate` on this segment, with the road's outer
+   * edge `x` on that side — for a marker next to the band.
+   */
+  separatelyMapped?: Array<SeparatelyMappedSidepath & { x: number }>
+}
+
+/** Median area in a glue band where a street splits into two carriageways. */
+export type SceneMedianOpening = {
+  points: Array<{ x: number; y: number }>
+  medianHint: 'verge' | 'crossing'
+  dimmed?: boolean
 }
 
 export type SceneJunctionBand = {
@@ -221,6 +233,8 @@ export type RoadSpaceScene = {
   carriagewayPlate?: SceneCarriagewayPlate
   carriagewayPlates?: SceneCarriagewayPlate[]
   slotRects: SceneSlotRect[]
+  /** Median fills in glue bands (the median growing out of a bidirectional road). */
+  medianOpenings?: SceneMedianOpening[]
   polylines: ScenePolyline[]
   /** Union of segment `separatelyMapped` hints (text only; no geometry). */
   separatelyMapped?: SeparatelyMappedSidepath[]

@@ -751,7 +751,12 @@ export function buildRoadSpaceSegment(
   // indices (SRK: lanes=* / lanes:forward|backward), ignoring on-carriageway cycle edges.
   const explicitPlacement = parsePlacement(effectiveTags.placement)
   const driveN = drivingLaneCount(carriageway)
-  const placement = resolvePlacement(effectiveTags, driveN)
+  const isDriving = (s: RoadSpaceSlot) =>
+    s.kind === 'motor' || s.kind === 'bus' || s.kind === 'both_ways'
+  const placement = resolvePlacement(effectiveTags, driveN, {
+    backward: carriageway.filter((s) => isDriving(s) && s.direction === 'backward').length,
+    bothWays: carriageway.filter((s) => isDriving(s) && s.direction === 'both_ways').length,
+  })
   const expandedPipes = carriageway.length > driveN
   const usePipePlacement =
     explicitPlacement != null && explicitPlacement.kind !== 'transition' && expandedPipes

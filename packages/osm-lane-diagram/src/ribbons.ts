@@ -367,7 +367,7 @@ function collectSyntheticSlices(
       pushHinge(belowGeom, above.rightKerbX, u.index, false)
     } else if (flushLeft && belowGeom.leftX < above.leftKerbX - EPS) {
       pushHinge(belowGeom, above.leftKerbX, u.index, false)
-    } else if (!flushLeft && !flushRight) {
+    } else {
       const hinge = interiorHingeX(below, above, u.index, false)
       if (hinge != null) pushHinge(belowGeom, hinge, u.index, false)
     }
@@ -392,7 +392,7 @@ function collectSyntheticSlices(
       pushHinge(aboveGeom, below.rightKerbX, u.index, false)
     } else if (flushLeft && aboveGeom.leftX < below.leftKerbX - EPS) {
       pushHinge(aboveGeom, below.leftKerbX, u.index, false)
-    } else if (!flushLeft && !flushRight) {
+    } else {
       const hinge = interiorHingeX(above, below, u.index, true)
       if (hinge != null) pushHinge(aboveGeom, hinge, u.index, false)
     }

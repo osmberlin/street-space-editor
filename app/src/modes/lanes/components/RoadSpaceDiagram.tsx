@@ -9,6 +9,7 @@ import type {
   SceneSlotRectKind,
   SeparatelyMappedSidepath,
 } from '@osm-editor-kit/osm-lane-diagram'
+import { Bike, Footprints } from 'lucide-react'
 import { type ReactElement } from 'react'
 
 /**
@@ -22,7 +23,9 @@ const COLORS = {
   both_ways: '#fda4af', // rose-300
   sidewalk: '#f5f5f4', // stone-100 — warm, lighter than carriageway
   shared_path: '#a7f3d0', // emerald-200 — between cycle and sidewalk
-  median: 'transparent', // gap — icon only (verge / crossing)
+  median: 'transparent', // median rects are filled with medianVerge / medianCrossing
+  medianVerge: '#d9f99d', // lime-200 — grass between the carriageways
+  medianCrossing: '#f5f5f4', // stone-100 — paved island with a crossing
   sibling: '#e4e4e7', // zinc-200 — opposite carriageway placeholder
   motorUntagged: '#c4c4c8',
   busUntagged: '#fef3c7',
@@ -47,7 +50,8 @@ const COLORS = {
   /** Default / inferred clear widths (not OSM-tagged). */
   calculatedWidthLabel: '#7c3aed', // violet-600
   siblingLabel: '#52525b',
-  medianIcon: '#65a30d', // lime-600 — grass verge
+  medianIcon: '#4d7c0f', // lime-700 — grass verge
+  separateMarker: '#57534e', // stone-600 — sidewalk / cycleway mapped as its own way
   crossingIcon: '#57534e', // stone-600
   carriagewayPlate: '#e7e5e4', // stone-200 — subtle asphalt behind motor/bus
   debugLink: '#0891b2', // cyan-600
@@ -476,6 +480,58 @@ function MedianMark({
   return <MedianVergeIcon cx={cx} cy={cy} size={size} />
 }
 
+function medianFill(hint: 'verge' | 'crossing' | undefined): string {
+  return hint === 'crossing' ? COLORS.medianCrossing : COLORS.medianVerge
+}
+
+/**
+ * Marker next to the road edge for a sidewalk / cycleway that is mapped as its own way:
+ * a dashed line with a small icon, outside the kerb where the path would be.
+ */
+function SeparatelyMappedMarker({
+  hint,
+  band,
+}: {
+  hint: NonNullable<RoadSpaceScene['bands'][number]['separatelyMapped']>[number]
+  band: RoadSpaceScene['bands'][number]
+}): ReactElement {
+  const offset = hint.prefix === 'cycleway' ? 5 : 10
+  const x = hint.side === 'left' ? hint.x - offset : hint.x + offset
+  const midY = band.y + band.height / 2 + (hint.prefix === 'cycleway' ? -12 : 12)
+  const Icon = hint.prefix === 'cycleway' ? Bike : Footprints
+  const size = 12
+  return (
+    <g pointerEvents="none" opacity={band.dimmed ? 0.7 : 1}>
+      <line
+        x1={x}
+        y1={band.y + 5}
+        x2={x}
+        y2={band.y + band.height - 5}
+        stroke={COLORS.separateMarker}
+        strokeWidth={1.25}
+        strokeDasharray="1 4"
+        strokeLinecap="round"
+      />
+      <rect
+        x={x - size / 2 - 1}
+        y={midY - size / 2 - 1}
+        width={size + 2}
+        height={size + 2}
+        fill="white"
+      />
+      <Icon
+        x={x - size / 2}
+        y={midY - size / 2}
+        width={size}
+        height={size}
+        color={COLORS.separateMarker}
+        strokeWidth={2}
+        aria-hidden
+      />
+    </g>
+  )
+}
+
 function isRibbonHighlighted(ribbon: SceneRibbon, highlightedSlotId?: string | null): boolean {
   if (highlightedSlotId == null || highlightedSlotId === '') return false
   if (ribbon.slotId === highlightedSlotId) return true
@@ -599,7 +655,15 @@ function SlotRect({
       <g opacity={fillOpacity}>
         {!skipTravelFill && (
           <>
-            {isMedian ? null : rect.points && rect.points.length >= 3 ? (
+            {isMedian ? (
+              <rect
+                x={rect.x}
+                y={rect.y}
+                width={rect.width}
+                height={rect.height}
+                fill={medianFill(rect.medianHint)}
+              />
+            ) : rect.points && rect.points.length >= 3 ? (
               <polygon
                 points={pointsAttr(rect.points)}
                 fill={fill}
@@ -664,7 +728,7 @@ function SlotRect({
       rect.height >= 14 ? (
         <text
           x={cx}
-          y={cy + (hasLaneGlyph ? glyphSize * 0.55 : 0)}
+          y={cy + (hasLaneGlyph ? glyphSize * 0.55 + (rect.turn ? 4 : 0) : 0)}
           textAnchor="middle"
           dominantBaseline="middle"
           fontSize={Math.min(10, Math.max(7, rect.width * 0.22))}
@@ -886,6 +950,15 @@ export function RoadSpaceDiagram({
         <CorridorRibbon key={ribbon.id} ribbon={ribbon} highlightedSlotId={highlightedSlotId} />
       ))}
 
+      {(scene.medianOpenings ?? []).map((opening, i) => (
+        <polygon
+          key={`median-opening-${i}`}
+          points={pointsAttr(opening.points)}
+          fill={medianFill(opening.medianHint)}
+          pointerEvents="none"
+        />
+      ))}
+
       {scene.slotRects.map((rect) => (
         <SlotRect
           key={`${rect.role}-${rect.slotId}`}
@@ -953,6 +1026,16 @@ export function RoadSpaceDiagram({
           />
         ))}
 
+      {scene.bands.flatMap((band) =>
+        (band.separatelyMapped ?? []).map((hint) => (
+          <SeparatelyMappedMarker
+            key={`separate-${band.wayId}-${band.role}-${hint.prefix}-${hint.side}`}
+            hint={hint}
+            band={band}
+          />
+        )),
+      )}
+
       {/* Way-direction cue + side labels above markings. */}
       {scene.polylines
         .filter((line) => line.kind === 'placement_guide')
@@ -988,17 +1071,20 @@ export function RoadSpaceDiagram({
                 opacity={0.55}
                 points={`${x - head},${midY + head * 0.2} ${x},${midY - head} ${x + head},${midY + head * 0.2}`}
               />
-              <text
-                x={topX + 8}
-                y={y0 + 12}
-                fontSize={9}
-                fill={COLORS.placement_guide}
-                fontFamily="ui-sans-serif, system-ui, sans-serif"
-                fontWeight={600}
-                opacity={0.75}
-              >
-                way ↑
-              </text>
+              {/* Not on narrow roads: the label would run into *:right. */}
+              {rightEdge - topX > 75 ? (
+                <text
+                  x={topX + 8}
+                  y={y0 + 12}
+                  fontSize={9}
+                  fill={COLORS.placement_guide}
+                  fontFamily="ui-sans-serif, system-ui, sans-serif"
+                  fontWeight={600}
+                  opacity={0.75}
+                >
+                  way ↑
+                </text>
+              ) : null}
               <text
                 x={leftEdge + 4}
                 y={y0 + 12}
@@ -1043,7 +1129,8 @@ export function RoadSpaceDiagram({
               : line.forward === 'up'
                 ? `${x - head},${midY + head * 0.2} ${x},${midY - head} ${x + head},${midY + head * 0.2}`
                 : null
-          const label = line.forward === 'down' ? 'way ↓' : line.forward === 'up' ? 'way ↑' : null
+          // Names the dimmed lanes: they belong to the other OSM way of this street.
+          const label = `${siblingLabel}${line.forward === 'down' ? ' ↓' : line.forward === 'up' ? ' ↑' : ''}`
           return (
             <g key={`${line.id}-cue`} pointerEvents="none">
               {arrowPoints ? (
@@ -1059,13 +1146,14 @@ export function RoadSpaceDiagram({
               ) : null}
               {label ? (
                 <text
-                  x={x + 6}
+                  x={x}
                   y={y0 + 24}
-                  fontSize={8}
+                  textAnchor="middle"
+                  fontSize={7.5}
                   fill={COLORS.placement_guide}
                   fontFamily="ui-sans-serif, system-ui, sans-serif"
                   fontWeight={600}
-                  opacity={0.55}
+                  opacity={0.8}
                 >
                   {label}
                 </text>

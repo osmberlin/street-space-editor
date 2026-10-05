@@ -12,6 +12,7 @@ export type {
   SceneSlotRectKind,
   SceneSlotRect,
   ScenePolyline,
+  SceneMedianOpening,
   SceneSegmentBand,
   SceneJunctionBand,
   SceneRibbon,

@@ -27,6 +27,7 @@ import type {
   SceneDebugBandOffset,
   SceneDebugCorrespondenceLink,
   SceneJunctionBand,
+  SceneMedianOpening,
   ScenePolyline,
   SceneSegmentBand,
   SceneSlotRect,
@@ -242,6 +243,9 @@ function forkGapM(fork: RoadSpaceSegment['fork'] | undefined): number {
 function stackWidthM(slots: RoadSpaceSlot[], fork?: RoadSpaceSegment['fork']): number {
   const sum = slots.reduce((s, slot) => s + slot.widthM, 0)
   if (!fork) return sum
+  // No opposite branch drawn and no split inside this stack → there is no median to add.
+  const splitInside = fork.leftSlotIds.length > 0 && fork.rightSlotIds.length > 0
+  if (siblingStackWidthM(fork) === 0 && !splitInside) return sum
   return sum + forkGapM(fork) + siblingStackWidthM(fork)
 }
 
@@ -471,6 +475,36 @@ function directionSplitX(band: BandGeometry, metersToPx: number): number | null 
   })
   if (last < 0 || last === slots.length - 1) return null
   return round2(band.slotLeftX[last]! + slots[last]!.widthM * metersToPx)
+}
+
+/** `separate` hints of a band with the road's outer x on that side (marker anchor). */
+function separatelyMappedOnBand(band: BandGeometry): Pick<SceneSegmentBand, 'separatelyMapped'> {
+  const hints = band.segment.separatelyMapped
+  if (band.segment.synthetic || !hints || hints.length === 0) return {}
+  const dimmedSide = band.segment.fork?.dimmedSide
+  const hasOpposite = (band.segment.fork?.siblingSlots?.length ?? 0) > 0
+  const out = hints
+    // On a dual band the side towards the opposite branch is the median, not a road edge.
+    .filter((h) => !(hasOpposite && h.side === dimmedSide))
+    .map((h) => ({ ...h, x: roadOuterX(band, h.side) }))
+  return out.length > 0 ? { separatelyMapped: out } : {}
+}
+
+/**
+ * Median fill height: through the compact glue band to the next real dual band, so two
+ * dual segments in a row show one continuous median.
+ */
+function medianRectHeight(
+  bands: BandGeometry[],
+  bandIndex: number,
+  extent: { y: number; height: number },
+): number {
+  let next = bandIndex + 1
+  while (bands[next]?.segment.synthetic && !bands[next]!.junction) next++
+  const nextBand = bands[next]
+  const dualFollows =
+    nextBand != null && !nextBand.segment.synthetic && nextBand.medianLeftX != null
+  return dualFollows ? round2(nextBand.y - extent.y) : extent.height
 }
 
 function bandOuterWidth(band: BandGeometry): number {
@@ -1273,6 +1307,7 @@ export function layoutRoadSpace(
     dimmed: b.segment.synthetic ? true : b.segment.role !== 'current',
     ...(b.segment.synthetic ? { synthetic: true } : {}),
     ...(b.junction ? { junction: true } : {}),
+    ...separatelyMappedOnBand(b),
   }))
 
   const junctions: SceneJunctionBand[] = layoutBands
@@ -1329,7 +1364,8 @@ export function layoutRoadSpace(
         x: band.medianLeftX,
         y: extent.y,
         width: round2(band.medianRightX - band.medianLeftX),
-        height: extent.height,
+        // Reach the next dual band so the median fill has no gap at the segment seam.
+        height: medianRectHeight(layoutBands, bandIndex, extent),
         widthProvenance: 'inferred',
         label: 'median',
         medianHint: fork?.medianHint ?? 'verge',
@@ -1502,6 +1538,7 @@ export function layoutRoadSpace(
     }
   }
 
+  const medianOpenings: SceneMedianOpening[] = []
   // Median opening: where a bidirectional band meets a dual band through a glue band,
   // the two median faces grow out of the point where the directions meet.
   for (let i = 1; i < layoutBands.length - 1; i++) {
@@ -1517,6 +1554,16 @@ export function layoutRoadSpace(
     if (tipX == null) continue
     const dualY = round2(dual === above ? glue.y : glue.y + glue.height)
     const plainY = round2(dual === above ? glue.y + glue.height : glue.y)
+    {
+      const leftFace: Array<{ x: number; y: number }> = []
+      const rightFace: Array<{ x: number; y: number }> = []
+      appendSCurve(leftFace, dual.medianLeftX!, dualY, tipX, plainY, TRANSITION_CURVE_SAMPLES)
+      appendSCurve(rightFace, dual.medianRightX, dualY, tipX, plainY, TRANSITION_CURVE_SAMPLES)
+      medianOpenings.push({
+        points: dedupePoints([...leftFace, ...rightFace.reverse()]),
+        medianHint: dual.segment.fork?.medianHint ?? 'verge',
+      })
+    }
     for (const [name, faceX] of [
       ['left', dual.medianLeftX!],
       ['right', dual.medianRightX],
@@ -1672,6 +1719,7 @@ export function layoutRoadSpace(
         }
       : {}),
     slotRects,
+    ...(medianOpenings.length > 0 ? { medianOpenings } : {}),
     polylines,
     ...(separatelyMapped.length > 0 ? { separatelyMapped } : {}),
     ...(unresolvedSibling ? { unresolvedSibling: true } : {}),

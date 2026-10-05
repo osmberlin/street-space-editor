@@ -13,3 +13,8 @@ Core features to date:
 - Dual-carriageway forks: sibling branch slots, median gaps, dimmed opposite branch, and separately-mapped sidepath hints
 - Continuous kerb ribbons and carriageway plates with S-curve morphing between cross-section bands
 - Pure TypeScript library — no React/JSX, no OSM fetch or app imports; fixtures export `@osm-editor-kit/osm-lane-diagram/fixtures`
+- The way line follows the selected way band by band and bends into its carriageway at a dual split; `placement:forward` / `placement:backward` are read
+- Dual splits: sidewalks, kerbs, outer edges, lane fills and the median (`scene.medianOpenings`) morph through the glue band
+- `scene.bands[].separatelyMapped` anchors markers for `sidewalk|cycleway:*=separate` next to the road edge
+- Turn lanes that start between the two directions taper out of their neighbour lane
+- Fixtures include real Berlin ways (bus lane, mid-road cycle lane, centre lane for both directions, merge lane drop)

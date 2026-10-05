@@ -404,4 +404,37 @@ describe('review regressions', () => {
     // More than the pocket's own band: the fill continues into the glue band below it.
     expect(pocket.bandSlices.length).toBeGreaterThanOrEqual(2)
   })
+
+  test('placement:forward / placement:backward count the lanes of one direction', () => {
+    const tags = { highway: 'secondary', lanes: '4', 'lanes:forward': '3', 'lanes:backward': '1' }
+    const offset = (extra: Record<string, string>) =>
+      buildRoadSpaceSegment({ ...tags, ...extra }, { wayId: 1, role: 'current' }).centrelineOffsetM
+    // Lanes are 3 m by default: backward | forward 1 | forward 2 | forward 3
+    expect(offset({ 'placement:forward': 'left_of:1' })).toBeCloseTo(3, 2)
+    expect(offset({ 'placement:forward': 'right_of:1' })).toBeCloseTo(6, 2)
+    expect(offset({ 'placement:forward': 'middle_of:3' })).toBeCloseTo(10.5, 2)
+    // Seen in backward travel, the left of the backward lane is the middle of the road.
+    expect(offset({ 'placement:backward': 'left_of:1' })).toBeCloseTo(3, 2)
+    expect(offset({ 'placement:backward': 'right_of:1' })).toBeCloseTo(0, 2)
+  })
+
+  test('a dual carriageway without a known opposite branch adds no empty median', () => {
+    const scene = sceneOf('nahmitzer-damm-double-left')
+    const right = Math.max(...scene.slotRects.map((r) => r.x + r.width))
+    const butt = scene.polylines.find((l) => l.id.startsWith('butt-top'))!
+    expect(Math.max(...butt.points.map((p) => p.x))).toBeCloseTo(right, 1)
+  })
+
+  test('separately mapped sidewalks are anchored on the band, median fills the glue band', () => {
+    const scene = sceneOf('karl-marx-bi-to-dual')
+    const current = scene.bands.find((b) => b.role === 'current' && !b.synthetic)!
+    expect(current.separatelyMapped?.map((h) => `${h.prefix}:${h.side}`).sort()).toEqual([
+      'sidewalk:left',
+      'sidewalk:right',
+    ])
+    // The dual band's left side faces the opposite branch — no road edge there.
+    const next = scene.bands.find((b) => b.role === 'next' && !b.synthetic)!
+    expect(next.separatelyMapped?.map((h) => h.side)).toEqual(['right'])
+    expect(scene.medianOpenings).toHaveLength(1)
+  })
 })
