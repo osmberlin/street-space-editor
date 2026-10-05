@@ -24,7 +24,6 @@ const MULTI_SEGMENT_FIXTURES = [
   'karl-marx-dual-opposite',
   'karl-marx-crossing-turns',
   't-junction',
-  'cross-junction',
   'placement-transition',
   'reversed-neighbour',
 ] as const

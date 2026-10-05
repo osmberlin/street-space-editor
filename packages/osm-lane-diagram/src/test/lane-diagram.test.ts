@@ -1439,7 +1439,7 @@ describe('sceneToSvg snapshots', () => {
 
 describe('all fixtures', () => {
   test('every fixture lays out without throwing and has ≥1 slot rect per segment', () => {
-    expect(laneDiagramFixtures).toHaveLength(26)
+    expect(laneDiagramFixtures).toHaveLength(31)
     for (const fixture of laneDiagramFixtures) {
       const chain = fixtureChain(fixture.id)
       const scene = layoutRoadSpace(chain)

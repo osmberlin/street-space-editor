@@ -1,6 +1,13 @@
 import { laneDiagramFixtures } from '@osm-editor-kit/osm-lane-diagram/fixtures'
 
-export type FixtureGroupId = 'basic' | 'transitions' | 'islands' | 'field' | 'bike' | 'width'
+export type FixtureGroupId =
+  | 'basic'
+  | 'transitions'
+  | 'islands'
+  | 'field'
+  | 'berlin'
+  | 'bike'
+  | 'width'
 
 export type AuditDemoId = (typeof AUDIT_DEMO_IDS)[number]
 
@@ -22,12 +29,24 @@ const FIXTURE_GROUPS: readonly {
   {
     id: 'islands',
     label: 'Islands & junctions',
-    fixtureIds: ['dual-carriageway-island', 'karl-marx-dual-split', 't-junction', 'cross-junction'],
+    fixtureIds: ['dual-carriageway-island', 'karl-marx-dual-split', 't-junction'],
   },
   {
     id: 'field',
     label: 'Field bugs (Berlin)',
     fixtureIds: ['karl-marx-bi-to-dual', 'karl-marx-dual-opposite', 'karl-marx-crossing-turns'],
+  },
+  {
+    id: 'berlin',
+    label: 'Berlin cases',
+    fixtureIds: [
+      'streitstrasse-mid-road-cycle',
+      'karl-liebknecht-bus-lane',
+      'heerstrasse-both-ways-lane',
+      'seestrasse-merge-lane-drop',
+      'hermannstrasse-placement-forward',
+      'nahmitzer-damm-double-left',
+    ],
   },
   {
     id: 'bike',

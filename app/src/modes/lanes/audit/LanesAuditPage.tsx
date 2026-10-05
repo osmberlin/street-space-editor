@@ -31,8 +31,7 @@ const ROLE_LABEL: Record<RoadSpaceSegmentRole, string> = {
 
 const DEFAULT_SANDBOX_CURRENT = `highway=residential
 lanes=2
-sidewalk=both
-name=Sandboxstraße`
+sidewalk=both`
 
 const LANE_RENDERING_RESEARCH_URL = `${APP_REPO_URL}/blob/main/research/lane-rendering/README.md`
 const WIDTH_MEASUREMENTS_RESEARCH_URL = `${APP_REPO_URL}/blob/main/research/width-measurements/README.md`
@@ -329,7 +328,7 @@ function Legend(): ReactElement {
     { label: 'Opposite carriageway', color: ROAD_SPACE_SIBLING_SWATCH },
   ]
   return (
-    <section aria-labelledby="legend-heading" className="mb-8 border-b border-zinc-200 pb-6">
+    <section aria-labelledby="legend-heading" className="mt-8 border-t border-zinc-200 pt-6">
       <h2
         id="legend-heading"
         className="m-0 mb-3 text-sm font-semibold tracking-wide text-zinc-500 uppercase"
@@ -702,8 +701,6 @@ export function LanesAuditDemo({ demoId }: { demoId: AuditDemoId }): ReactElemen
         <DemoPrevNext demoId={demoId} />
       </header>
 
-      <Legend />
-
       <label className="mb-2 flex items-center gap-2 text-sm text-zinc-700">
         <input
           type="checkbox"
@@ -743,6 +740,8 @@ export function LanesAuditDemo({ demoId }: { demoId: AuditDemoId }): ReactElemen
           {fixture.note}
         </p>
       ) : null}
+
+      <Legend />
 
       <footer className="mt-10 border-t border-zinc-200 pt-4">
         <Note>
