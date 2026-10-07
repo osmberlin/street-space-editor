@@ -6,7 +6,7 @@ import {
   providerCoversBbox,
   type ProviderId,
 } from '@osm-editor-kit/street-imagery'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 
 const bboxKey = (bbox: Bbox | null) =>
   bbox ? `${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}` : 'none'
@@ -18,6 +18,12 @@ const withinBbox = (bbox: Bbox) => (item: { lngLat: [number, number] }) => {
   const [lng, lat] = item.lngLat
   return lng >= bbox[0] && lng <= bbox[2] && lat >= bbox[1] && lat <= bbox[3]
 }
+
+/**
+ * Keeps the last result on screen while the next viewport loads. Only while the query is on:
+ * a query that is off (provider turned off, zoomed out too far) would show that result forever.
+ */
+export const previousDataWhile = (enabled: boolean) => (enabled ? keepPreviousData : undefined)
 
 /** Host limit on top of the provider's own minimum zooms: below it nothing is requested. */
 type ProviderDataOptions = { minZoom?: number }
@@ -45,7 +51,7 @@ export const useProviderPhotos = (
       return photos.filter(withinBbox(bbox as Bbox))
     },
     enabled,
-    placeholderData: (previous) => previous,
+    placeholderData: previousDataWhile(enabled),
   })
 }
 
@@ -70,7 +76,7 @@ export const useProviderSequences = (
     queryKey: ['provider-sequences', providerId, bboxKey(bbox), zoom],
     queryFn: ({ signal }) => adapter?.fetchSequences?.(bbox as Bbox, zoom, signal) ?? [],
     enabled,
-    placeholderData: (previous) => previous,
+    placeholderData: previousDataWhile(enabled),
   })
 }
 
@@ -97,6 +103,6 @@ export const useProviderMapFeatures = (
       return features.filter(withinBbox(bbox as Bbox))
     },
     enabled,
-    placeholderData: (previous) => previous,
+    placeholderData: previousDataWhile(enabled),
   })
 }
