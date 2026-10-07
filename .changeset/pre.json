@@ -29,6 +29,7 @@
     "imagery-layers-before-id",
     "imagery-low-zoom-lines",
     "imagery-mapillary-cone-direction",
+    "imagery-off-provider-stale-data",
     "imagery-panoramax-no-widgets",
     "imagery-photo-cache-limit",
     "imagery-photo-click-target",
