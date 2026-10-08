@@ -6,24 +6,8 @@ set -e
 # Same check areas as CI (`check-ci`); lint/format may auto-fix. @see package-json-scripts
 bun run check-pre-push
 
-# Wave package changeset coverage. If missing, scaffolds + cursor-agent rewrite + commit,
-# then exits non-zero so you push again (new commit cannot join this push).
-# Bypass: SKIP_PACKAGE_CHANGESET_AUTO=1 or git push --no-verify (sparingly).
-if [ "${SKIP_PACKAGE_CHANGESET_AUTO:-}" = "1" ]; then
-  echo "SKIP_PACKAGE_CHANGESET_AUTO=1 — skipping packages:changeset --auto"
-else
-  set +e
-  bun run packages:changeset -- --auto
-  code=$?
-  set -e
-  if [ "$code" -eq 2 ]; then
-    echo ""
-    echo "Changeset committed. Run git push again to include it."
-    exit 1
-  fi
-  if [ "$code" -ne 0 ]; then
-    exit "$code"
-  fi
-fi
+# Wave package changeset coverage: unreleased commits that touch a wave package need a pending
+# changeset. Check only — write the changeset into the commit, see .changeset/README.md.
+bun run packages:changeset -- --check
 
 # Use `git push --no-verify` to skip (sparingly).

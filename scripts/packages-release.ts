@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Version + build + publish for first-wave @osm-editor-kit packages.
+ * Version + build + commit + publish for first-wave @osm-editor-kit packages.
  *
  * See .changeset/README.md.
  *
@@ -163,7 +163,7 @@ async function checkPackage(
   if (!version.includes('-alpha')) {
     issues.push({
       message: `version "${version}" is not an alpha prerelease`,
-      fix: 'Land package commits, then re-run bun run packages:release (auto-creates a changeset)',
+      fix: 'Land package commits with a changeset, then re-run bun run packages:release',
     })
   }
   if (pkg.publishConfig?.tag !== 'alpha') {
@@ -302,23 +302,14 @@ async function ensureChangesetCoverage() {
     process.exit(1)
   }
 
-  p.log.step('Ensuring changeset coverage (same as pre-push)…')
-  const result = spawnSync('bun', ['run', 'scripts/packages-changeset.ts', '--', '--auto'], {
+  p.log.step('Checking changeset coverage (same as pre-push)…')
+  const result = spawnSync('bun', ['run', 'scripts/packages-changeset.ts', '--', '--check'], {
     cwd: ROOT,
     stdio: 'inherit',
     encoding: 'utf8',
   })
-  const code = result.status ?? 1
-  if (code === 2) {
-    p.outro(
-      pc.yellow(
-        'Changeset was created and committed. Push that commit (git push), then re-run bun run packages:release.',
-      ),
-    )
-    process.exit(1)
-  }
-  if (code !== 0) {
-    p.outro(pc.red('Could not ensure changeset coverage. Fix and retry.'))
+  if ((result.status ?? 1) !== 0) {
+    p.outro(pc.red('Add and commit the missing changeset, then re-run bun run packages:release.'))
     process.exit(1)
   }
 }
@@ -375,10 +366,39 @@ async function runReadinessChecks(opts: { requireNoPending: boolean }) {
   return { globalIssues, reports }
 }
 
+/**
+ * macOS chime + dialog, so the human knows a publish waits for them. Detached, so it never
+ * blocks the release. (Notification Centre banners from osascript did not show up reliably.)
+ */
+function notifyHuman(message: string) {
+  if (process.platform !== 'darwin') return
+  const detached = { detached: true, stdio: 'ignore' } as const
+  spawn('afplay', ['/System/Library/Sounds/Glass.aiff'], detached).unref()
+  spawn(
+    'osascript',
+    [
+      '-e',
+      `display dialog ${JSON.stringify(message)} with title "packages:release" buttons {"OK"} default button 1 giving up after 120`,
+    ],
+    detached,
+  ).unref()
+}
+
 async function publishReady(ready: PackageReport[], flags: { yes: boolean; dryRun: boolean }) {
   if (flags.dryRun) {
     p.outro(pc.dim(`Dry run — would publish ${ready.length} package(s) to dist-tag alpha.`))
     return
+  }
+
+  // npm asks for 2FA on publish and needs a terminal for it. Stop here instead of failing
+  // mid-publish with EOTP: everything before this point is committed, so a re-run only publishes.
+  if (!process.stdin.isTTY && !process.env.CI) {
+    p.log.warn(`Not published yet — ${ready.length} package(s) wait for npm 2FA in a terminal:`)
+    for (const r of ready) console.log(`  ${pc.yellow('•')} ${r.name}@${r.version}`)
+    console.log(`  ${pc.dim('→')} ${pc.cyan('bun run packages:release -- --publish-only --yes')}`)
+    notifyHuman(`${ready.length} package(s) wait for you: run the publish command in a terminal.`)
+    p.outro(pc.yellow('Stopped before npm publish (no TTY). Run the command above in a terminal.'))
+    process.exit(1)
   }
 
   p.log.info(
@@ -401,6 +421,9 @@ async function publishReady(ready: PackageReport[], flags: { yes: boolean; dryRu
     p.outro('Publish cancelled.')
     return
   }
+
+  // With --yes nobody confirmed at the prompt, so the 2FA request may come while they look away.
+  if (flags.yes) notifyHuman(`Publishing ${ready.length} package(s): approve the npm 2FA prompt.`)
 
   for (const [i, r] of ready.entries()) {
     const label = `${r.name}@${r.version}`
@@ -427,7 +450,7 @@ async function publishReady(ready: PackageReport[], flags: { yes: boolean; dryRu
       p.log.error(`Failed ${label}`)
       p.outro(
         pc.yellow(
-          'If npm asked for a one-time password: finish browser auth (or npm login), then re-run bun run packages:release — already-published versions are skipped.',
+          'If npm asked for a one-time password: finish browser auth (or npm login), then re-run bun run packages:release -- --publish-only — already-published versions are skipped.',
         ),
       )
       process.exit(1)
@@ -436,7 +459,7 @@ async function publishReady(ready: PackageReport[], flags: { yes: boolean; dryRu
   }
 
   p.note(ready.map((r) => `bun add ${r.name}@alpha`).join('\n'), 'Install in consumers')
-  p.outro(pc.green('Done. Push the version-bump commit when ready.'))
+  p.outro(pc.green('Done. Push the version-bump commit (git push).'))
 }
 
 async function main() {
@@ -473,6 +496,9 @@ async function main() {
     p.log.step('Building wave packages…')
     runInherit('bun', ['run', 'build:packages'])
     p.log.success('build:packages done')
+
+    // Commit before publishing, so a failed publish leaves a clean tree and a re-run only publishes.
+    if (!flags.dryRun) commitVersionBumps()
   }
 
   const { globalIssues, reports } = await runReadinessChecks({ requireNoPending: true })
@@ -503,15 +529,6 @@ async function main() {
   }
 
   await publishReady(ready, flags)
-
-  if (!flags.dryRun && !flags.publishOnly) {
-    try {
-      commitVersionBumps()
-    } catch (error) {
-      p.log.warn(error instanceof Error ? error.message : String(error))
-      p.log.info('Publish succeeded; commit version bumps manually if needed.')
-    }
-  }
 }
 
 main().catch((error) => {

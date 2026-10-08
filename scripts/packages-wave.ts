@@ -45,13 +45,24 @@ export function gitCapture(args: string[], cwd = ROOT): { status: number; stdout
   }
 }
 
-/** Prefer @{upstream}..HEAD; fall back to origin/main..HEAD. */
+/**
+ * Unpushed commits that are not released yet: @{upstream}..HEAD (fallback origin/main..HEAD),
+ * starting after the latest version commit in that range. `changeset version` records the
+ * changesets it consumed in pre.json, so a commit that changes pre.json marks everything up to
+ * it as released — including its own package.json bumps.
+ */
 export function defaultGitRange(): string {
   const upstream = gitCapture(['rev-parse', '--abbrev-ref', '@{upstream}'])
-  if (upstream.status === 0 && upstream.stdout.trim()) {
-    return '@{upstream}..HEAD'
-  }
-  return 'origin/main..HEAD'
+  const base = upstream.status === 0 && upstream.stdout.trim() ? '@{upstream}' : 'origin/main'
+  const versionCommit = gitCapture([
+    'log',
+    '-1',
+    '--format=%H',
+    `${base}..HEAD`,
+    '--',
+    '.changeset/pre.json',
+  ]).stdout.trim()
+  return `${versionCommit || base}..HEAD`
 }
 
 function shouldIgnoreTouchedPath(path: string): boolean {

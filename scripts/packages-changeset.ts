@@ -1,21 +1,17 @@
 #!/usr/bin/env bun
 /**
- * Non-interactive changeset writer for first-wave packages.
+ * Changeset check + scaffold for first-wave packages.
+ *
+ * The changeset is written by whoever writes the commit (user-facing notes, in the same commit).
+ * This script only tells you when one is missing and scaffolds the file.
  *
  * Usage:
- *   bun run packages:changeset
- *   bun run packages:changeset -- --check
- *   bun run packages:changeset -- --auto
- *   bun run packages:changeset -- --force
- *
- * Exit codes (--auto):
- *   0 — already covered / nothing to do
- *   1 — failure
- *   2 — changeset committed; run git push again
+ *   bun run packages:changeset -- --check          exit 1 if a touched wave package is uncovered
+ *   bun run packages:changeset -- [name]           scaffold .changeset/<name>.md for uncovered packages
+ *   bun run packages:changeset -- --force [name]   scaffold for all touched packages
  */
 
-import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
@@ -33,7 +29,6 @@ import {
 
 const EXIT_OK = 0
 const EXIT_FAIL = 1
-const EXIT_REPUSH = 2
 
 const ADJECTIVES = [
   'brave',
@@ -81,17 +76,20 @@ const NOUNS = [
 ]
 
 function parseArgs(argv: string[]) {
-  const flags = { check: false, auto: false, force: false }
+  const flags = { check: false, force: false, name: null as string | null }
   for (const arg of argv) {
     if (arg === '--') continue
     if (arg === '--check') flags.check = true
-    else if (arg === '--auto') flags.auto = true
     else if (arg === '--force') flags.force = true
     else if (arg === '--help' || arg === '-h') {
-      console.log(`Usage: bun run packages:changeset [--check|--auto|--force]`)
+      console.log(`Usage: bun run packages:changeset -- [--check] [--force] [name]`)
       process.exit(0)
     } else if (arg.startsWith('-')) {
       throw new Error(`Unknown argument: ${arg}`)
+    } else if (!/^[a-z0-9-]+$/.test(arg)) {
+      throw new Error(`Changeset name must be kebab-case: ${arg}`)
+    } else {
+      flags.name = arg
     }
   }
   return flags
@@ -137,10 +135,11 @@ function buildChangesetMarkdown(packages: WavePackage[], range: string): string 
   return `${frontmatter}${sections.join('\n\n')}\n`
 }
 
-function writeScaffold(packages: WavePackage[], range: string): string {
+function writeScaffold(packages: WavePackage[], range: string, name: string | null): string {
   mkdirSync(join(ROOT, '.changeset'), { recursive: true })
-  let id = randomChangesetId()
+  let id = name ?? randomChangesetId()
   let path = join(ROOT, '.changeset', `${id}.md`)
+  if (name && existsSync(path)) throw new Error(`.changeset/${name}.md already exists`)
   while (existsSync(path)) {
     id = randomChangesetId()
     path = join(ROOT, '.changeset', `${id}.md`)
@@ -149,116 +148,8 @@ function writeScaffold(packages: WavePackage[], range: string): string {
   return path
 }
 
-function resolveCursorAgentBinary(): string | null {
-  for (const name of ['cursor-agent', 'agent']) {
-    const which = spawnSync('which', [name], { encoding: 'utf8' })
-    if (which.status === 0 && which.stdout.trim()) return which.stdout.trim()
-  }
-  return null
-}
-
-function buildAgentPrompt(changesetPath: string, packages: WavePackage[], range: string): string {
-  const templatePath = join(ROOT, 'scripts/packages-changeset-agent-prompt.md')
-  let template = readFileSync(templatePath, 'utf8')
-  const relativePath = changesetPath.startsWith(ROOT)
-    ? changesetPath.slice(ROOT.length + 1)
-    : changesetPath
-
-  const evidence = packages
-    .map((name) => {
-      const dir = DIR_BY_NAME[name]
-      const notes = commitsTouchingPackage(dir, range)
-      const diff = spawnSync('git', ['diff', range, '--', dir], {
-        cwd: ROOT,
-        encoding: 'utf8',
-        maxBuffer: 2 * 1024 * 1024,
-      })
-      const diffText = (diff.stdout || '').slice(0, 12_000)
-      return [
-        `### ${name}`,
-        '',
-        'Commits:',
-        formatCommitBullets(notes),
-        '',
-        'Diff (truncated):',
-        '```diff',
-        diffText || '(empty)',
-        '```',
-      ].join('\n')
-    })
-    .join('\n\n')
-
-  template = template.replaceAll('{{CHANGESET_PATH}}', relativePath)
-  template = template.replaceAll('{{PACKAGE_EVIDENCE}}', evidence)
-  return template
-}
-
-function runCursorAgent(prompt: string): { status: number; stdout: string; stderr: string } {
-  const bin = resolveCursorAgentBinary()
-  if (!bin) {
-    return {
-      status: 1,
-      stdout: '',
-      stderr:
-        'cursor-agent (or agent) not found on PATH. Install Cursor CLI / log in, then retry.',
-    }
-  }
-  const model = process.env.OSM_CHANGESET_AGENT_MODEL?.trim() || 'composer-2.5'
-  const args = [
-    '-p',
-    '--trust',
-    '--force',
-    '--output-format',
-    'json',
-    '--model',
-    model,
-    '--workspace',
-    ROOT,
-    prompt,
-  ]
-  const result = spawnSync(bin, args, {
-    cwd: ROOT,
-    encoding: 'utf8',
-    maxBuffer: 8 * 1024 * 1024,
-  })
-  return {
-    status: result.status ?? 1,
-    stdout: result.stdout ?? '',
-    stderr: result.stderr ?? '',
-  }
-}
-
-function commitChangesetFile(changesetPath: string, packages: WavePackage[]): void {
-  const rel = changesetPath.startsWith(ROOT) ? changesetPath.slice(ROOT.length + 1) : changesetPath
-  const short = packages.map(shortPackageName).join(', ')
-  const message = `Chore: add changeset for ${short}`
-
-  // Skip husky so pre-push does not recurse while we are already in a hook.
-  const env = { ...process.env, HUSKY: '0' }
-  const add = spawnSync('git', ['add', '--', rel], { cwd: ROOT, encoding: 'utf8', env })
-  if (add.status !== 0) {
-    throw new Error(`git add failed:\n${add.stderr || add.stdout}`)
-  }
-  const commit = spawnSync('git', ['commit', '-m', message], {
-    cwd: ROOT,
-    encoding: 'utf8',
-    env,
-  })
-  if (commit.status !== 0) {
-    throw new Error(`git commit failed:\n${commit.stderr || commit.stdout}`)
-  }
-}
-
 async function main() {
   const flags = parseArgs(process.argv.slice(2))
-  if (flags.check && flags.auto) {
-    throw new Error('Use either --check or --auto, not both')
-  }
-
-  if (process.env.SKIP_PACKAGE_CHANGESET_AUTO === '1' && flags.auto) {
-    p.log.warn('SKIP_PACKAGE_CHANGESET_AUTO=1 — skipping packages:changeset --auto')
-    process.exit(EXIT_OK)
-  }
 
   p.intro(pc.bgCyan(pc.black(' packages:changeset ')))
 
@@ -286,63 +177,21 @@ async function main() {
     for (const name of uncovered) {
       console.log(`  ${pc.red('✗')} ${name}`)
     }
-    console.log(`  ${pc.dim('→')} ${pc.cyan('bun run packages:changeset -- --auto')}`)
     console.log(
-      `  ${pc.dim('→')} or scaffold only: ${pc.cyan('bun run packages:changeset')} then edit .changeset/*.md`,
+      `  ${pc.dim('→')} ${pc.cyan('bun run packages:changeset -- <name>')}  scaffolds .changeset/<name>.md`,
+    )
+    console.log(
+      `  ${pc.dim('→')} Rewrite its body into user-facing notes, then commit it (amend the unpushed fix commit).`,
     )
     p.outro(pc.yellow('Push blocked until a pending changeset covers these packages.'))
     process.exit(EXIT_FAIL)
   }
 
-  const path = writeScaffold(packagesToWrite, range)
+  const path = writeScaffold(packagesToWrite, range, flags.name)
   const rel = path.startsWith(ROOT) ? path.slice(ROOT.length + 1) : path
   p.log.success(`Wrote ${rel}`)
-
-  if (!flags.auto) {
-    p.log.info('Edit the body into user-facing notes per package, then commit the file.')
-    console.log(`  ${pc.dim('→')} ${pc.cyan(`bun run packages:changeset -- --auto`)}  to rewrite via cursor-agent`)
-    p.outro(pc.green('Scaffold ready.'))
-    process.exit(EXIT_OK)
-  }
-
-  const s = p.spinner()
-  s.start('Running cursor-agent to rewrite user-facing changeset notes…')
-  const prompt = buildAgentPrompt(path, packagesToWrite, range)
-  const agent = runCursorAgent(prompt)
-  if (agent.status !== 0) {
-    s.stop('cursor-agent failed')
-    p.log.error(agent.stderr || agent.stdout || 'cursor-agent exited non-zero')
-    p.log.info(`Scaffold left at ${rel} — edit manually, commit, then push again.`)
-    console.log(`  ${pc.dim('→')} Install/login: ${pc.cyan('cursor-agent login')}`)
-    p.outro(pc.red('Auto changeset rewrite failed.'))
-    process.exit(EXIT_FAIL)
-  }
-  s.stop('cursor-agent finished')
-
-  const stillUncovered = uncoveredWavePackages(range)
-  if (stillUncovered.length > 0 && !flags.force) {
-    // Force path writes all touched; after agent, pending should mention them.
-    // If agent deleted frontmatter packages, fail loudly.
-    const missing = stillUncovered.filter((name) => packagesToWrite.includes(name))
-    if (missing.length > 0) {
-      p.log.error('After agent rewrite, some packages are still uncovered:')
-      for (const name of missing) console.log(`  ${pc.red('✗')} ${name}`)
-      p.outro(pc.red('Fix the changeset frontmatter and retry.'))
-      process.exit(EXIT_FAIL)
-    }
-  }
-
-  try {
-    commitChangesetFile(path, packagesToWrite)
-  } catch (error) {
-    p.log.error(error instanceof Error ? error.message : String(error))
-    p.outro(pc.red('Failed to commit changeset.'))
-    process.exit(EXIT_FAIL)
-  }
-
-  p.log.success('Committed changeset')
-  p.outro(pc.yellow('Run git push again to include the changeset commit.'))
-  process.exit(EXIT_REPUSH)
+  p.log.info('Rewrite the body into user-facing notes per package, then commit the file.')
+  p.outro(pc.green('Scaffold ready.'))
 }
 
 main().catch((error) => {

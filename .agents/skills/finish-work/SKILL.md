@@ -18,7 +18,7 @@ Run in the project root, or in each changed monorepo package (`app/`, `processin
 3. Write the commit message using the format below.
 4. **Default: commit.** Run the commit path below unless the user clearly did not want a commit.
 5. **Draft only when no-commit intent is clear.** Show the message and stop; do not run `git commit`.
-6. **Wave packages:** if the commit (or working tree) touches `packages/<wave>/` for a published kit package, run `bun run packages:changeset -- --check`. If it fails, run `bun run packages:changeset -- --auto` so a pending changeset exists before the user pushes. Pre-push runs the same `--auto` path as a backstop (may require a second `git push`). See [`.changeset/README.md`](../../../.changeset/README.md).
+6. **Wave packages:** if the commit touches `packages/<wave>/` for a published kit package, add a changeset to the same commit: `.changeset/<descriptive-name>.md` with `"<package>": patch` frontmatter and 1–4 user-facing bullets. `bun run packages:changeset -- --check` tells you whether one is missing; pre-push runs the same check and fails the push. See [`.changeset/README.md`](../../../.changeset/README.md).
 
 No-commit intent includes: explicit deferral ("don't commit", "draft only", "message only", "what would the commit be"), check/fix-only asks ("run check", "fix lint", "fix CI" with no wrap-up), review or question-only turns, or the user saying they will commit themselves.
 
